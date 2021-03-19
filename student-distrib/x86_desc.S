@@ -20,6 +20,11 @@ tss_size:
 
 ldt_size:
     .long ldt_bottom - ldt - 1
+	
+	.word 0 # padding
+gdt_desc:
+	.word gdt_bottom - gdt - 1
+	.long gdt
 
     .word 0 # Padding
 ldt_desc:
