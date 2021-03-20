@@ -1,6 +1,6 @@
 
-#ifndef SET_IDT
-#define SET_IDT
+#ifndef _SET_IDT_H
+#define _SET_IDT_H
 
 /* IDT Constants */
 #define BASE_INT		32
@@ -11,4 +11,4 @@ void idt_fill(void);
 
 
 
-#endif SET_IDT /* SET_IDT */
+#endif /* _SET_IDT_H */

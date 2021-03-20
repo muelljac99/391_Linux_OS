@@ -8,6 +8,7 @@
 #include "i8259.h"
 #include "debug.h"
 #include "tests.h"
+#include "set_idt.h"
 
 #define RUN_TESTS
 
