@@ -25,7 +25,7 @@ extern irq_handler_ptr irq_D0, irq_D1, irq_D2, irq_D3, irq_D4, irq_D5, irq_D6, i
 extern irq_handler_ptr irq_E0, irq_E1, irq_E2, irq_E3, irq_E4, irq_E5, irq_E6, irq_E7, irq_E8, irq_E9, irq_EA, irq_EB, irq_EC, irq_ED, irq_EE, irq_EF;
 extern irq_handler_ptr irq_F0, irq_F1, irq_F2, irq_F3, irq_F4, irq_F5, irq_F6, irq_F7, irq_F8, irq_F9, irq_FA, irq_FB, irq_FC, irq_FD, irq_FE, irq_FF;
 
-/* make an array of the ptrs to be used in the idt initialization */
+/* make an array of the ptrs to be used in the idt initialization (this isn't working - needs to be constant for some reason)*/
 /*
 void (*irq_handle[NUM_VEC])() = {irq_00, irq_01, irq_02, irq_03, irq_04, irq_05, irq_06, irq_07, irq_08, irq_09, irq_0A, irq_0B, irq_0C, irq_0D, irq_0E, irq_0F,
 								 irq_10, irq_11, irq_12, irq_13, irq_14, irq_15, irq_16, irq_17, irq_18, irq_19, irq_1A, irq_1B, irq_1C, irq_1D, irq_1E, irq_1F,

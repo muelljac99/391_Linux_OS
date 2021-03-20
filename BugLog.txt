@@ -1,0 +1,6 @@
+	Example Bug #0; Found - 3/20/21 by Tim Green; Resolved - 3/20/21 by Tim Green
+This line should hold the description of the bug. Try to make it is informative as possible so we all know what's going on for everyone's work.
+This line should be filled in after the bug is resolved with the method used to resolve the bug or the key mistake we were making.
+
+	IDT Initialization Function Ptr Array Const Bug #1; Found - 3/20/21 by Tim Green;
+The idt should have descriptor entries filled with the function ptr to the assembly linkage code provided in irq_asm.S. I have been attempting to allow this ptr access through the use of an array of function ptrs. The array throws an error saying the elements are not constant. The function ptrs can be used as is within the idt_fill function and the idt test will pass but I don't want to have to type out all 256 function ptrs in the fill function.
