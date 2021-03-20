@@ -17,7 +17,7 @@ void idt_fill(void){
 	for(idt_index = 0; idt_index < NUM_VEC; idt_index++){
 		// fill the exception IRQ descriptors
 		if(idt_index < BASE_INT){
-			SET_IDT_ENTRY(idt[idt_index], irq_00); 	// this shouldn't just load the irq_00
+			SET_IDT_ENTRY(idt[idt_index], irq_handle[idt_index]);
 			idt[idt_index].present = 0;
 			idt[idt_index].seg_selector = KERNEL_CS;
 			idt[idt_index].dpl = 0;
@@ -25,7 +25,7 @@ void idt_fill(void){
 		}
 		// fill the interrupt IRQ descriptors
 		else if(idt_index != SYS_CALL_IRQ){
-			SET_IDT_ENTRY(idt[idt_index], irq_00); 	// this shouldn't just load the irq_00
+			SET_IDT_ENTRY(idt[idt_index], irq_handle[idt_index]);
 			idt[idt_index].present = 0;
 			idt[idt_index].seg_selector = KERNEL_CS;
 			idt[idt_index].dpl = 0;
@@ -33,7 +33,7 @@ void idt_fill(void){
 		}
 		// fill the system call IRQ descriptor
 		else{
-			SET_IDT_ENTRY(idt[idt_index], irq_00); // this shouldn't just load the irq_00
+			SET_IDT_ENTRY(idt[idt_index], irq_handle[idt_index]);
 			idt[idt_index].present = 0;
 			idt[idt_index].seg_selector = KERNEL_CS;
 			idt[idt_index].dpl = 3;
