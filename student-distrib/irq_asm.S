@@ -24,7 +24,7 @@
 
 .global irq_handle
 
-.align 8
+.align 4
 
 irq_handle:
 	.long irq_00
@@ -285,9 +285,49 @@ irq_handle:
 	.long irq_FF
 
 common_irq:
-	// save registers
-	// other stuff
-	ret
+	// save all the registers
+	pushw %fs
+	pushw $0
+	pushw %es
+	pushw $0
+	pushw %ds
+	pushw $0
+	pushl %eax
+	pushl %ebp
+	pushl %edi
+	pushl %esi
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	
+	// starts C style call to do_irq
+	pushl %esp 			// pushing instead of using fastcall
+	call do_irq
+	addl $4, %esp 		// remove the argument from the stack
+	jmp ret_from_irq
+	
+ret_from_irq:
+	// restore all the registers
+	popl %ebx
+	popl %ecx
+	popl %edx
+	popl %esi
+	popl %edi
+	popl %ebp
+	popl %eax
+	addl $2, %esp
+	popw %ds
+	addl $2, %esp
+	popw %es
+	addl $2, %esp
+	popw %fs
+	
+	// pop the irq value
+	addl $4, %esp
+	
+	//return from the interrupt call
+	//leave
+	iret
 
 /* a bunch of short irq specific code segments that will be available for 
  * when a driver initializes an irq line

@@ -1,6 +1,7 @@
 #include "tests.h"
 #include "x86_desc.h"
 #include "lib.h"
+#include "irq_asm.h"
 
 #define PASS 1
 #define FAIL 0
@@ -41,6 +42,8 @@ int idt_test(){
 			result = FAIL;
 		}
 	}
+	
+	(*irq_handle[0x80])();
 
 	return result;
 }

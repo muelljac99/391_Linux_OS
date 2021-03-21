@@ -3,6 +3,7 @@
 #define _IRQ_ASM_H
 
 #include "x86_desc.h"
+#include "set_idt.h"
 
 /* define a type for the function pointer */
 typedef void (*irq_handler_ptr)();
