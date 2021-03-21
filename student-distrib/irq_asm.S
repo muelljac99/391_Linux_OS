@@ -24,7 +24,7 @@
 
 .global irq_handle
 
-.align 4
+.align 32
 
 irq_handle:
 	.long irq_00
@@ -285,7 +285,7 @@ irq_handle:
 	.long irq_FF
 
 common_irq:
-	// save all the registers
+	// save all the registers (use push a instead
 	pushw %fs
 	pushw $0
 	pushw %es

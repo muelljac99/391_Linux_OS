@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "tests.h"
 #include "set_idt.h"
+#include "service_irq.h"
 
 #define RUN_TESTS
 
@@ -142,7 +143,16 @@ void entry(unsigned long magic, unsigned long addr) {
 
     /* Init the PIC */
     i8259_init();
-
+	
+	/*initializing the devices:
+		set the idt entry to present = 1
+		fill the irq_handlers array with the function ptr
+		enable irq for this line
+	*/
+	idt[KEYBOARD_IRQ].present = 1;
+	irq_handlers[KEYBOARD_IRQ - BASE_INT] = handle_keyboard;
+	enable_irq(KEYBOARD_IRQ);
+	
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
 

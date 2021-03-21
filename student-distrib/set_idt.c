@@ -12,7 +12,6 @@
  */
 void idt_fill(void){
 	/* Fill all the entries of the IDT with NULL handlers and present = 0 */
-	lidt(idt_desc_ptr);  // initialize the idtr
 	int idt_index;
 	for(idt_index = 0; idt_index < NUM_VEC; idt_index++){
 		// fill the exception IRQ descriptors
@@ -48,46 +47,5 @@ void idt_fill(void){
 		idt[idt_index].reserved1 = 1;
 		idt[idt_index].reserved0 = 0;
 	}
-	
-	// set the handlers for the exceptions and the interrupts we want at boot
-	
-}
-
-/*
- *
- */
-uint32_t do_irq(pt_regs_t* reg){
-	unsigned int irq = ~(reg->irq_num);
-	unsigned int flags;
-	
-	//critical section starts here
-	cli_and_save(flags);
-	// invalid irq #
-	if(irq >= NUM_VEC){
-		printf("INVALID IRQ #%x: CANNOT HANDLE\n", irq);
-		return -1;
-	}
-	// check that the idt entry is present
-	if(idt[irq].present == 0){
-		printf("IRQ ENTRY NOT INITIALIZED: IRQ #%x\n", irq);
-		return -1;
-	}
-	
-	// check the type of irq
-	if(irq < BASE_INT){
-		// this is an exception
-		printf("EXCEPTION #%x\n", irq);
-		while(1);
-	}
-	else if(irq == SYS_CALL_IRQ){
-		// this is a system call
-		printf("SYSTEM CALL\n");
-	}
-	else{
-		//anything else is an interrupt
-		printf("INTERRUPT #%x\n", irq);
-	}
-	restore_flags(flags);
-	return 0;
-	
+	return;
 }

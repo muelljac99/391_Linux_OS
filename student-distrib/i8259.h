@@ -8,6 +8,11 @@
 
 #include "types.h"
 
+/* IRQ Vectors for master and slave */
+#define MASTER_VECTOR		0x20
+#define SLAVE_VECTOR		0x28
+#define PIC_IRQ_MAX			0x2F
+
 /* Ports that each PIC sits on */
 #define MASTER_8259_PORT    0x20
 #define SLAVE_8259_PORT     0xA0
