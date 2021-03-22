@@ -80,7 +80,7 @@ void enable_irq(uint32_t irq_num) {
 		outb(slave_mask, SLAVE_8259_PORT+1);
 	}
 	else{
-		printf("INVALID PIC IRQ NUMBER #%x: CANNOT ENABLE", irq_num);
+		printf("INVALID PIC IRQ NUMBER #%x: CANNOT ENABLE\n", irq_num);
 	}
 	
 	//restore flags and leave critical section
@@ -116,7 +116,7 @@ void disable_irq(uint32_t irq_num) {
 		outb(slave_mask, SLAVE_8259_PORT+1);
 	}
 	else{
-		printf("INVALID PIC IRQ NUMBER #%x: CANNOT DISABLE", irq_num);
+		printf("INVALID PIC IRQ NUMBER #%x: CANNOT DISABLE\n", irq_num);
 	}
 	
 	//restore flags and leave critical section
@@ -149,7 +149,7 @@ void send_eoi(uint32_t irq_num) {
 		outb((EOI|(ICW3_SLAVE)), MASTER_8259_PORT);
 	}
 	else{
-		printf("INVALID PIC IRQ NUMBER #%x: CANNOT SEND EOI", irq_num);
+		printf("INVALID PIC IRQ NUMBER #%x: CANNOT SEND EOI\n", irq_num);
 	}
 	//restore flags and leave critical section
 	restore_flags(flags);

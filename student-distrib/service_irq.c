@@ -35,6 +35,7 @@ uint32_t do_irq(pt_regs_t* reg){
 	// check the type of irq
 	if(irq < BASE_INT){
 		// this is an exception
+		clear();
 		printf("EXCEPTION #%x\n", irq);
 		while(1);
 	}
