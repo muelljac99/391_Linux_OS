@@ -43,6 +43,7 @@ int idt_test(){
 		}
 	}
 	
+	// force a system call interupt to check that the idt maps correctly
 	asm volatile("int $0x80");
 
 	return result;

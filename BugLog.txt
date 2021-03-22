@@ -17,3 +17,6 @@ STI was not called so the OS was not allowing any normal interrupts and instead 
 	Printing on Release Bug #4; Found - 3/21/21 by all; Resolved - 3/21/21 by all
 The handler would call the putc for any keycode even on release and put many random characters on the screen.
 We set a condition to be sure that the scan code is a value that we are prepared to handle otherwise it does not print anything.
+
+	RTC Interrupt Leads to Exception 0 Bug #5; Found - 3/21/21 by all;
+The RTC interrupt is received but it leads to an idt vector of 0x0. We think this is because the slave PIC is not initialized properly so the offset vector is not being loaded as it should.

@@ -6,9 +6,15 @@
 #include "set_idt.h"
 #include "irq_asm.h"
 
-/*	idt_init
- *
- *
+/* 
+ * idt_fill
+ *   DESCRIPTION: Fills the IDT with all of the assembly linkage code that will trace back
+ * 				  to the common irq and do irq functions. Sets the information bits for the differences
+ * 				  between interupt and trap gates as well as priveledge level for each entry
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: changes the IDT
  */
 void idt_fill(void){
 	/* Fill all the entries of the IDT with NULL handlers and present = 0 */

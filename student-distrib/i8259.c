@@ -9,10 +9,18 @@
 uint8_t master_mask; /* IRQs 0-7  */
 uint8_t slave_mask;  /* IRQs 8-15 */
 
-/* Initialize the 8259 PIC */
+/* 
+ * i8259_init
+ *   DESCRIPTION: Initializes the 8259 PICs for the master and the slave. Sets the IDT vector offset for
+ * 				  both devices and masks all of the interrupt lines to start.
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: masks all PIC interrupts
+ */
 void i8259_init(void) {
 	unsigned int flags;
-	int i;
+	
 	//save the flags and start critical section
 	cli_and_save(flags);
 	
@@ -45,7 +53,14 @@ void i8259_init(void) {
 	return;
 }
 
-/* Enable (unmask) the specified IRQ */
+/* 
+ * enable_irq
+ *   DESCRIPTION: Enable the interrupt or remove the mask for a specified interrupt line.
+ *   INPUTS: the irq vector to unmask
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: unmasks interrupt line(s)
+ */
 void enable_irq(uint32_t irq_num) {
 	uint8_t irq_bit = 0x01;
 	unsigned int flags;
@@ -75,7 +90,14 @@ void enable_irq(uint32_t irq_num) {
 	return;
 }
 
-/* Disable (mask) the specified IRQ */
+/* 
+ * disable_irq
+ *   DESCRIPTION: Disable the interrupt or set the mask for a specified interrupt line.
+ *   INPUTS: the irq vector to mask
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: masks interrupt line(s)
+ */
 void disable_irq(uint32_t irq_num) {
 	uint8_t irq_bit = 0x01;
 	unsigned int flags;
@@ -104,7 +126,15 @@ void disable_irq(uint32_t irq_num) {
 	return;
 }
 
-/* Send end-of-interrupt signal for the specified IRQ */
+/* 
+ * send_eoi
+ *   DESCRIPTION: Send the end of interrupt signal to the necessary PIC(s) to indicate that
+ * 				  an interrupt has been processed and the PIC can watch for other interrupts now
+ *   INPUTS: the irq vector to send the eoi signal for
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: sends a message to the PIC(s)
+ */
 void send_eoi(uint32_t irq_num) {
 	unsigned int flags;
 	

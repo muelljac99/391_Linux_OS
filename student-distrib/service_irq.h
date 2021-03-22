@@ -4,11 +4,14 @@
 
 #include "types.h"
 
+/* the number of PIC irq lines */
 #define PIC_IRQ_NUM		16
 
+/* the keyboard irq and port */
 #define KEYBOARD_IRQ 	0x21
 #define KEYBOARD_PORT 	0x60
 
+/* the rtc irq and port */
 #define RTC_IRQ 		0x28
 #define RTC_PORT 		0x70
 

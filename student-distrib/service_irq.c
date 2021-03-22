@@ -6,8 +6,14 @@
 #include "irq_asm.h"
 #include "service_irq.h"
 
-/* do_irq
- *
+/* 
+ * do_irq
+ *   DESCRIPTION: This is the common C function for all interrupts. It takes in the complemented irq number and
+ * 				  determines the proper execution based on the type of irq and the handler function if it is an interrupt.
+ *   INPUTS: a ptr to saved registers as well as the irq number
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on failure
+ *   SIDE EFFECTS: masks and unmasks interrupt lines if interrupt and freezes if an exception
  */
 uint32_t do_irq(pt_regs_t* reg){
 	unsigned int irq = ~(reg->irq_num);
@@ -51,6 +57,15 @@ uint32_t do_irq(pt_regs_t* reg){
 	return 0;
 }
 
+/* 
+ * handle_keyboard
+ *   DESCRIPTION: The handler function for the keyboard. This takes in the scancode from the keyboard port and determines
+ * 				  the associated character to print.
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: places a character onto the screen
+ */
 void handle_keyboard(void){
 	char scancode[] = {0 , 0, '1', '2', '3','4', '5', '6', '7', '8', '9', '0', 0, 0, 0, 0, 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i',
 					   'o', 'p', 0, 0, 0, 0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 0, 0, 0, 0, 0, 'z', 'x', 'c', 'v', 'b', 'n', 
@@ -64,6 +79,15 @@ void handle_keyboard(void){
 	return;
 }
 
+/* 
+ * handle_rtc
+ *   DESCRIPTION: The handler function for the rtc. Calls the test_interrupts function and clears out the
+ * 				  C register to ensure more interrupts from the rtc can follow
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: clears the C register on the rtc
+ */
 void handle_rtc(void){
 	printf("RTC");
 	
@@ -71,6 +95,15 @@ void handle_rtc(void){
 	inb(RTC_PORT+1); 				//read it so the next interrupts will come
 }
 
+/* 
+ * init_rtc
+ *   DESCRIPTION: Initialize the rtc by setting the idt entry accordingly and unmasking the irq line. The NMI is
+ * 				  disabled to set up the device itself
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: changes the idt and writes to rtc registers
+ */
 void init_rtc(void){
 	unsigned int flags;
 	char regB;

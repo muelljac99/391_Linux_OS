@@ -26,6 +26,7 @@
 
 .align 32
 
+# the array of the handler ptrs to be used in the setting of the idt table
 irq_handle:
 	.long irq_00
 	.long irq_01
@@ -330,7 +331,7 @@ ret_from_irq:
 	iret
 
 /* a bunch of short irq specific code segments that will be available for 
- * when a driver initializes an irq line
+ * when a driver initializes an irq line (pushes the complement of the irq number)
  */
 irq_00:
 	pushl $0xFFFFFFFF

@@ -163,7 +163,7 @@ typedef union pde {
 	} __attribute__ ((packed));
 } pde_t;
 
-// the 
+// the global paging related variables defined in the .S file
 extern pde_t page_dir[PAGE_ENTRY_NUM];
 extern pte_t page_table[PAGE_ENTRY_NUM];
 extern void page_enable();

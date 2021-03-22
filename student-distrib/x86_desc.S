@@ -127,7 +127,15 @@ page_table:
 	.long 0
 	.endr
 
-# asm code for enabling the paging
+/* 
+ * page_enable
+ *   DESCRIPTION: Set the control registers of the system to enable paging of mixed sizes and
+ * 				  set the register for the address of the page directory
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: changes control registers
+ */
 page_enable:
 	# push ebp
 	pushl %ebp
