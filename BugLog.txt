@@ -20,3 +20,4 @@ We set a condition to be sure that the scan code is a value that we are prepared
 
 	RTC Interrupt Leads to Exception 0 Bug #5; Found - 3/21/21 by all;
 The RTC interrupt is received but it leads to an idt vector of 0x0. We think this is because the slave PIC is not initialized properly so the offset vector is not being loaded as it should.
+In our RTC handler and initialization functions we were using outb with the arguments reversed. outb(port, data) instead of outb(data, port).
