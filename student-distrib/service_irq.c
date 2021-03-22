@@ -91,7 +91,7 @@ void handle_keyboard(void){
 void handle_rtc(void){
 	//test_interrupts();
 	
-	outb(0x0C, RTC_PORT);			//select the register C
+	outb(RTC_REGC, RTC_PORT);			//select the register C
 	inb(RTC_PORT+1); 				//read it so the next interrupts will come
 }
 
@@ -129,14 +129,14 @@ void init_rtc(void){
 	//start of critical section
 	cli_and_save(flags);
 	
-	outb(0x8B, RTC_PORT);		//select status register B and disable NMI
-	regB = inb(RTC_PORT+1);		//read the value in regB
-	outb(0x8B, RTC_PORT);		//select the status register B and disable NMI again
-	outb((regB|0x40), RTC_PORT+1);	//turn on bit 6 of the register but keep the rest the same
+	outb(RTC_NMI_REGB, RTC_PORT);		//select status register B and disable NMI
+	regB = inb(RTC_PORT+1);				//read the value in regB
+	outb(RTC_NMI_REGB, RTC_PORT);		//select the status register B and disable NMI again
+	outb((regB|0x40), RTC_PORT+1);		//turn on bit 6 of the register but keep the rest the same
 	
 	// we do not want to change the interrupt rate
-	outb(0x8A, RTC_PORT);
-	outb(0x26, RTC_PORT+1);
+	outb(RTC_NMI_REGA, RTC_PORT);
+	outb(0x26, RTC_PORT+1); 			//0x26 is the default rtc frequency and rate setting
 	
 	enable_irq(RTC_IRQ);
 	

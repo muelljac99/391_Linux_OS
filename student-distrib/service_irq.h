@@ -16,7 +16,9 @@
 #define RTC_PORT 		0x70
 
 /* rtc register access */
-#define RTC_NMI_REGA 	0x8A 
+#define RTC_NMI_REGA 	0x8A
+#define RTC_NMI_REGB 	0x8B
+#define RTC_REGC		0x0C
 
 /* the structure to hold the saved registers when performing do_irq */
 typedef struct pt_regs {

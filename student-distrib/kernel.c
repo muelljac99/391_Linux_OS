@@ -156,13 +156,6 @@ void entry(unsigned long magic, unsigned long addr) {
 	// load the starting info into the page directory and table
 	load_page();
 	
-	//sanity check that all the paging ptrs and entries are set up properly
-	printf("page_dir %x\n", (unsigned int)page_dir);
-	printf("page_table %x\n", (unsigned int)page_table);
-	printf("directory 0 %x\n", page_dir[0].val);
-	printf("table 184 %x\n", page_table[184].val);
-	printf("directory 1 %x\n", page_dir[1].val);
-	
 	//enable paging
 	page_enable();
 	
