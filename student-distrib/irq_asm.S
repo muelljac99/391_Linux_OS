@@ -285,6 +285,10 @@ irq_handle:
 	.long irq_FE
 	.long irq_FF
 
+/* This is the default assembly linkage that each small irq-specific code jumps to.
+ * The code will save the registers and pass a pointer to the registers and irq number
+ * structure then call the default c irq handler
+ */
 common_irq:
 	// save all the registers (use push a instead
 	pushw %fs
@@ -306,7 +310,8 @@ common_irq:
 	call do_irq
 	addl $4, %esp 		// remove the argument from the stack
 	jmp ret_from_irq
-	
+
+/* the code segment that restores the registers and clears the stack then returns from interrupt */
 ret_from_irq:
 	// restore all the registers
 	popl %ebx

@@ -97,7 +97,7 @@ void handle_rtc(void){
 }
 
 /* 
- * init_rtc
+ * init_keyboard
  *   DESCRIPTION: Initialize the keyboard by setting the idt entry accordingly and unmasking the irq line.
  *   INPUTS: none
  *   OUTPUTS: none
