@@ -32,15 +32,13 @@ void i8259_init(void) {
 
 	//send the master and slave initialization words (no access to an outb_p macro)
 	outb(ICW1, MASTER_8259_PORT);
-	outb(ICW1, SLAVE_8259_PORT);
-
 	outb(ICW2_MASTER, MASTER_8259_PORT+1);
-	outb(ICW2_SLAVE, SLAVE_8259_PORT+1);
-	
 	outb(ICW3_MASTER, MASTER_8259_PORT+1);
-	outb(ICW3_SLAVE, SLAVE_8259_PORT+1);
-
 	outb(ICW4, MASTER_8259_PORT+1);
+	
+	outb(ICW1, SLAVE_8259_PORT);
+	outb(ICW2_SLAVE, SLAVE_8259_PORT+1);
+	outb(ICW3_SLAVE, SLAVE_8259_PORT+1);
 	outb(ICW4, SLAVE_8259_PORT+1);
 	
 	//keep the irq lines masked and unmask at specific device initialization
@@ -75,11 +73,13 @@ void enable_irq(uint32_t irq_num) {
 		//master PIC interrupt line
 		master_mask = (master_mask&irq_bit);			//take AND of the master to preserve other masks
 		outb(master_mask, MASTER_8259_PORT+1);
+		printf("MASTER\n");
 	}
 	else if(irq_num >= SLAVE_VECTOR && irq_num <= PIC_IRQ_MAX){
 		//slave PIC interrupt line
 		slave_mask = (slave_mask&irq_bit);				//take AND of the slave to preserve other masks
 		outb(slave_mask, SLAVE_8259_PORT+1);
+		printf("SLAVE\n");
 	}
 	else{
 		printf("INVALID PIC IRQ NUMBER #%x: CANNOT ENABLE", irq_num);

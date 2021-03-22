@@ -111,7 +111,6 @@ void init_rtc(void){
 	// handle our side of the initialization for the PIC and IDT
 	idt[RTC_IRQ].present = 1;
 	irq_handlers[RTC_IRQ - BASE_INT] = handle_rtc;
-	enable_irq(RTC_IRQ);
 	
 	//start of critical section
 	cli_and_save(flags);
@@ -125,5 +124,13 @@ void init_rtc(void){
 	outb(RTC_PORT+1, (regB|0x40));	//turn on bit 6 of the register but keep the rest the same
 	
 	// we do not want to change the interrupt rate
+	outb(RTC_PORT, 0x8A);
+	regB = inb(RTC_PORT+1);
+	outb(RTC_PORT, 0x8A);
+	outb(RTC_PORT+1, (regB&0xF0)|0x04);
+	
+	enable_irq(RTC_IRQ);
+	
+	restore_flags(flags);
 	return;
 }

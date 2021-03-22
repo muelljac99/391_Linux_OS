@@ -132,7 +132,7 @@ typedef union pte {
 	uint32_t val;
 	struct {
 		uint32_t present : 1;
-		uint32_t read_wite : 1;
+		uint32_t read_write : 1;
 		uint32_t user_super : 1;
 		uint32_t write_thru : 1;
 		uint32_t cache_dis : 1;
@@ -150,7 +150,7 @@ typedef union pde {
 	uint32_t val;
 	struct {
 		uint32_t present : 1;
-		uint32_t read_wite : 1;
+		uint32_t read_write : 1;
 		uint32_t user_super : 1;
 		uint32_t write_thru : 1;
 		uint32_t cache_dis : 1;

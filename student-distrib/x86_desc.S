@@ -117,15 +117,19 @@ idt_bottom:
 #allocating the space for one page table and the page directory
 	.align 4096
 page_dir:
+_page_dir:
 	.rept PAGE_ENTRY_NUM
 	.long 0
 	.endr
+page_dir_bottom:
 	
 	.align 4096
 page_table:
+_page_table:
 	.rept PAGE_ENTRY_NUM
 	.long 0
 	.endr
+page_table_bottom:
 
 /* 
  * page_enable
@@ -146,18 +150,18 @@ page_enable:
 	pushl %eax
 	
 	# set the cr3 with the page directory pointer
-	movl page_dir, %eax
+	movl $page_dir, %eax
 	movl %eax, %cr3
-	
-	# set cr0 with paging (bit 31) and protection bits (bit 0)
-	movl %cr0, %eax
-	orl $0x80000001, %eax
-	movl %eax, %cr0
 	
 	# set cr4 (bit 4) to allow mixed page sizes
 	movl %cr4, %eax
 	orl $0x00000010, %eax
 	movl %eax, %cr4
+	
+	# set cr0 with paging (bit 31) and protection bits (bit 0)
+	movl %cr0, %eax
+	orl $0x80000001, %eax
+	movl %eax, %cr0
 	
 	# restore callee save registers and flags
 	popl %eax
