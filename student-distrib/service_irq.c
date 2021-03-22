@@ -89,9 +89,9 @@ void handle_keyboard(void){
  *   SIDE EFFECTS: clears the C register on the rtc
  */
 void handle_rtc(void){
-	printf("RTC");
+	test_interrupts();
 	
-	outb(RTC_PORT, 0x0C);			//select the register C
+	outb(0x0C, RTC_PORT);			//select the register C
 	inb(RTC_PORT+1); 				//read it so the next interrupts will come
 }
 
@@ -115,19 +115,14 @@ void init_rtc(void){
 	//start of critical section
 	cli_and_save(flags);
 	
-	outb(RTC_PORT, 0x8A);		//select status register A and disable NMI
-	outb(RTC_PORT+1, 0x20);		//write to the RTC RAM
-	
-	outb(RTC_PORT, 0x8B);		//select status register B and disable NMI
+	outb(0x8B, RTC_PORT);		//select status register B and disable NMI
 	regB = inb(RTC_PORT+1);		//read the value in regB
-	outb(RTC_PORT, 0x8B);		//select the status register B and disable NMI again
-	outb(RTC_PORT+1, (regB|0x40));	//turn on bit 6 of the register but keep the rest the same
+	outb(0x8B, RTC_PORT);		//select the status register B and disable NMI again
+	outb((regB|0x40), RTC_PORT+1);	//turn on bit 6 of the register but keep the rest the same
 	
 	// we do not want to change the interrupt rate
-	outb(RTC_PORT, 0x8A);
-	regB = inb(RTC_PORT+1);
-	outb(RTC_PORT, 0x8A);
-	outb(RTC_PORT+1, (regB&0xF0)|0x04);
+	outb(0x8A, RTC_PORT);
+	outb(0x26, RTC_PORT+1);
 	
 	enable_irq(RTC_IRQ);
 	
