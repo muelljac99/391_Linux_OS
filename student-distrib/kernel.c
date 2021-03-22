@@ -149,9 +149,21 @@ void entry(unsigned long magic, unsigned long addr) {
 		fill the irq_handlers array with the function ptr
 		enable irq for this line
 	*/
+	
+	// intialize the keyboard
 	idt[KEYBOARD_IRQ].present = 1;
 	irq_handlers[KEYBOARD_IRQ - BASE_INT] = handle_keyboard;
 	enable_irq(KEYBOARD_IRQ);
+	
+	// initialize the rtc
+	init_rtc();
+	
+	// enable paging
+	page_enable();
+	// make a pde for the currently allocated page table
+	// make a 4kB page in the page table for the video memory (the rest are not present)
+	// make a 4MB page in the page directory for the kernel (the rest are not present)
+	
 	
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
@@ -162,6 +174,8 @@ void entry(unsigned long magic, unsigned long addr) {
      * without showing you any output */
     /*printf("Enabling Interrupts\n");
     sti();*/
+	
+	sti();
 
 #ifdef RUN_TESTS
     /* Run tests */

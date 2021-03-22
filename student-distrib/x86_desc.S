@@ -11,6 +11,8 @@
 .globl tss, tss_desc_ptr, ldt, ldt_desc_ptr
 .globl gdt_ptr
 .globl idt_desc_ptr, idt
+.globl page_dir, page_table
+.globl page_enable
 
 .align 4
 
@@ -111,3 +113,47 @@ _idt:
     .endr
 
 idt_bottom:
+
+#allocating the space for one page table and the page directory
+	.align 4096
+page_dir:
+	.rept PAGE_ENTRY_NUM
+	.long 0
+	.endr
+	
+	.align 4096
+page_table:
+	.rept PAGE_ENTRY_NUM
+	.long 0
+	.endr
+
+# asm code for enabling the paging
+page_enable:
+	# push ebp
+	pushl %ebp
+	movl %esp, %ebp
+	
+	# save the callee save registers and flags
+	pushfl
+	pushl %eax
+	
+	# set the cr3 with the page directory pointer
+	movl page_dir, %eax
+	movl %eax, %cr3
+	
+	# set cr0 with paging (bit 31) and protection bits (bit 0)
+	movl %cr0, %eax
+	orl $0x80000001, %eax
+	movl %eax, %cr0
+	
+	# set cr4 (bit 4) to allow mixed page sizes
+	movl %cr4, %eax
+	orl $0x00000010, %eax
+	movl %eax, %cr4
+	
+	# restore callee save registers and flags
+	popl %eax
+	popfl
+	
+	leave
+	ret

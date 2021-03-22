@@ -12,6 +12,7 @@ uint8_t slave_mask;  /* IRQs 8-15 */
 /* Initialize the 8259 PIC */
 void i8259_init(void) {
 	unsigned int flags;
+	int i;
 	//save the flags and start critical section
 	cli_and_save(flags);
 	
@@ -20,23 +21,27 @@ void i8259_init(void) {
 	slave_mask = 0xFF;
 	outb(master_mask, MASTER_8259_PORT+1); 		// +1 corresponds to the data port
 	outb(slave_mask, SLAVE_8259_PORT+1);
-	
-	//send the master initialization words (no access to an outb_p macro)
+
+	//send the master and slave initialization words (no access to an outb_p macro)
 	outb(ICW1, MASTER_8259_PORT);
-	outb(ICW2_MASTER, MASTER_8259_PORT+1);
-	outb(ICW3_MASTER, MASTER_8259_PORT+1);
-	outb(ICW4, MASTER_8259_PORT+1);
-	
-	//send the slave initialization words
 	outb(ICW1, SLAVE_8259_PORT);
+
+	outb(ICW2_MASTER, MASTER_8259_PORT+1);
 	outb(ICW2_SLAVE, SLAVE_8259_PORT+1);
+	
+	outb(ICW3_MASTER, MASTER_8259_PORT+1);
 	outb(ICW3_SLAVE, SLAVE_8259_PORT+1);
+
+	outb(ICW4, MASTER_8259_PORT+1);
 	outb(ICW4, SLAVE_8259_PORT+1);
 	
 	//keep the irq lines masked and unmask at specific device initialization
 	
 	//restore the flags and end of critical section
 	restore_flags(flags);
+	
+	enable_irq(0x22);		// enable the slave interrupt on the master
+	
 	return;
 }
 
@@ -113,6 +118,7 @@ void send_eoi(uint32_t irq_num) {
 	else if(irq_num >= SLAVE_VECTOR && irq_num <= PIC_IRQ_MAX){
 		//slave PIC interrupt line
 		outb((EOI|(irq_num&0x07)), SLAVE_8259_PORT);
+		outb((EOI|(ICW3_SLAVE)), MASTER_8259_PORT);
 	}
 	else{
 		printf("INVALID PIC IRQ NUMBER #%x: CANNOT SEND EOI", irq_num);

@@ -22,6 +22,9 @@
 /* Number of vectors in the interrupt descriptor table (IDT) */
 #define NUM_VEC     256
 
+/* paging information */
+#define PAGE_ENTRY_NUM 	1024
+
 #ifndef ASM
 
 /* This structure is used to load descriptor base registers
@@ -123,6 +126,47 @@ extern uint32_t ldt;
 extern uint32_t tss_size;
 extern seg_desc_t tss_desc_ptr;
 extern tss_t tss;
+
+/* the page table entry structure */
+typedef union pte {
+	uint32_t val;
+	struct {
+		uint32_t present : 1;
+		uint32_t read_wite : 1;
+		uint32_t user_super : 1;
+		uint32_t write_thru : 1;
+		uint32_t cache_dis : 1;
+		uint32_t accessed : 1;
+		uint32_t dirty : 1;
+		uint32_t zero_pad : 1;
+		uint32_t global : 1;
+		uint32_t available : 3;
+		uint32_t page_addr : 20;
+	} __attribute__ ((packed));
+} pte_t;
+
+/* the page directory entry structure */
+typedef union pde {
+	uint32_t val;
+	struct {
+		uint32_t present : 1;
+		uint32_t read_wite : 1;
+		uint32_t user_super : 1;
+		uint32_t write_thru : 1;
+		uint32_t cache_dis : 1;
+		uint32_t accessed : 1;
+		uint32_t zero_pad : 1;
+		uint32_t page_size : 1;
+		uint32_t ignored : 1;
+		uint32_t available : 3;
+		uint32_t table_addr : 20;
+	} __attribute__ ((packed));
+} pde_t;
+
+// the 
+extern pde_t page_dir[PAGE_ENTRY_NUM];
+extern pte_t page_table[PAGE_ENTRY_NUM];
+extern void page_enable();
 
 /* Sets runtime-settable parameters in the GDT entry for the LDT */
 #define SET_LDT_PARAMS(str, addr, lim)                          \
