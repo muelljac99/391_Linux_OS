@@ -15,6 +15,9 @@
 #define RTC_IRQ 		0x28
 #define RTC_PORT 		0x70
 
+/* rtc register access */
+#define RTC_NMI_REGA 	0x8A 
+
 /* the structure to hold the saved registers when performing do_irq */
 typedef struct pt_regs {
 	uint32_t EBX;
@@ -42,7 +45,10 @@ void handle_keyboard(void);
 /* handler for the rtc */
 void handle_rtc(void);
 
+/* initialize the keyboard */
+void init_keyboard(void);
+
 /* initializing the rtc */
 void init_rtc(void);
 
-#endif /* _SET_IDT_H */
+#endif /* _SERVICE_IRQ_H */

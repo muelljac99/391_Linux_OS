@@ -89,10 +89,24 @@ void handle_keyboard(void){
  *   SIDE EFFECTS: clears the C register on the rtc
  */
 void handle_rtc(void){
-	test_interrupts();
+	//test_interrupts();
 	
 	outb(0x0C, RTC_PORT);			//select the register C
 	inb(RTC_PORT+1); 				//read it so the next interrupts will come
+}
+
+/* 
+ * init_rtc
+ *   DESCRIPTION: Initialize the keyboard by setting the idt entry accordingly and unmasking the irq line.
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: changes the idt
+ */
+void init_keyboard(void){
+	idt[KEYBOARD_IRQ].present = 1;
+	irq_handlers[KEYBOARD_IRQ - BASE_INT] = handle_keyboard;
+	enable_irq(KEYBOARD_IRQ);
 }
 
 /* 
