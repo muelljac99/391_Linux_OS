@@ -11,6 +11,8 @@
 #include "set_idt.h"
 #include "service_irq.h"
 #include "paging.h"
+#include "rtc.h"
+#include "sys_call.h"
 
 #define RUN_TESTS
 
@@ -177,6 +179,15 @@ void entry(unsigned long magic, unsigned long addr) {
     launch_tests();
 #endif
     /* Execute the first program ("shell") ... */
+	
+	int x = 512;
+	
+	rtc_open("RTC");
+	rtc_write(1, &x, 0);
+	while(1){
+		rtc_read(1, &x, 0);
+		printf("1");
+	}
 
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");

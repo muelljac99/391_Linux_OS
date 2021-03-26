@@ -4,6 +4,13 @@
 
 #include "types.h"
 
+/* video memory size definitions */
+#define NUM_COLS    80
+#define NUM_ROWS    25
+
+/* exception number info */
+#define NUM_EXCEPTION	32
+
 /* the number of PIC irq lines */
 #define PIC_IRQ_NUM		16
 
@@ -11,14 +18,20 @@
 #define KEYBOARD_IRQ 	0x21
 #define KEYBOARD_PORT 	0x60
 
-/* the rtc irq and port */
-#define RTC_IRQ 		0x28
-#define RTC_PORT 		0x70
-
-/* rtc register access */
-#define RTC_NMI_REGA 	0x8A
-#define RTC_NMI_REGB 	0x8B
-#define RTC_REGC		0x0C
+/* important scancodes */
+#define LSHIFT			0x2A
+#define LSHIFT_R		0xAA
+#define RSHIFT			0x36
+#define RSHIFT_R		0xB6
+#define CTRL			0x1D
+#define CTRL_R			0x9D
+#define ALT				0x38
+#define ALT_R			0xB8
+#define CAPS_LOCK		0x3A
+#define TAB				0x0F
+#define ENTER			0x1C
+#define BACKSPACE		0x0E
+#define F1				0x3B
 
 /* the structure to hold the saved registers when performing do_irq */
 typedef struct pt_regs {
@@ -39,18 +52,12 @@ typedef struct pt_regs {
 void (*irq_handlers[PIC_IRQ_NUM])();
 
 /* do_irq is the main function called when an interrupt, exception, or system call occurs */
-uint32_t do_irq(pt_regs_t* reg);
+int32_t do_irq(pt_regs_t* reg);
 
 /* handler for the keyboard */
 void handle_keyboard(void);
 
-/* handler for the rtc */
-void handle_rtc(void);
-
 /* initialize the keyboard */
 void init_keyboard(void);
-
-/* initializing the rtc */
-void init_rtc(void);
 
 #endif /* _SERVICE_IRQ_H */

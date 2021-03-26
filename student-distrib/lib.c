@@ -12,6 +12,56 @@ static int screen_x;
 static int screen_y;
 static char* video_mem = (char *)VIDEO;
 
+/* int get_x(void);
+ * Inputs: void
+ * Return Value: screen_x value
+ * Function: A getter function for the horizontal position on the screen */
+int get_x(void){
+	return screen_x;
+}
+
+/* int get_y(void);
+ * Inputs: void
+ * Return Value: screen_y value
+ * Function: A getter function for the vertical position on the screen */
+int get_y(void){
+	return screen_y;
+}
+
+/* void set_x(int x);
+ * Inputs: New value for screen_x
+ * Return Value: none
+ * Function: A setter function for the horizontal position on the screen */
+void set_x(int x){
+	screen_x = x;
+	return;
+}
+
+/* void set_y(int y);
+ * Inputs: New value for screen_y
+ * Return Value: none
+ * Function: A setter function for the vertical position on the screen */
+void set_y(int y){
+	screen_y = y;
+	return;
+}
+
+/* void line_shift(void);
+ * Inputs: void
+ * Return Value: none
+ * Function: A function that moves all the data in the video memory up a line */
+void line_shift(void){
+	int j;
+	memmove(video_mem, video_mem + (2*NUM_COLS), (NUM_ROWS-1)*(2*NUM_COLS));
+	for(j=0; j<2*NUM_COLS; j++){
+		if(j%2 == 0)
+			video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ' ';
+		else
+			video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB;
+	}
+	return;
+}
+
 /* void clear(void);
  * Inputs: void
  * Return Value: none
@@ -22,6 +72,8 @@ void clear(void) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
         *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
     }
+	screen_x = 0;
+	screen_y = 0;
 }
 
 /* Standard printf().
@@ -171,12 +223,24 @@ void putc(uint8_t c) {
     if(c == '\n' || c == '\r') {
         screen_y++;
         screen_x = 0;
+		if(screen_y >= NUM_ROWS){
+			line_shift();
+			screen_y--;
+		}
     } else {
         *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = c;
         *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB;
         screen_x++;
-        screen_x %= NUM_COLS;
-        screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
+		if(screen_x == NUM_COLS){
+			screen_x = 0;
+			screen_y++;
+			if(screen_y >= NUM_ROWS){
+				line_shift();
+				screen_y--;
+			}
+		}
+        //screen_x %= NUM_COLS;
+        //screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
     }
 }
 
