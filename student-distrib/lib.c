@@ -478,7 +478,7 @@ void* memmove(void* dest, const void* src, uint32_t n) {
  *               in str1 than in str2; And a value less than zero
  *               indicates the opposite.
  * Function: compares string 1 and string 2 for equality */
-int32_t strncmp(const int8_t* s1, const int8_t* s2, uint32_t n) {
+int32_t strncmp(const uint8_t* s1, const uint8_t* s2, uint32_t n) {
     int32_t i;
     for (i = 0; i < n; i++) {
         if ((s1[i] != s2[i]) || (s1[i] == '\0') /* || s2[i] == '\0' */) {

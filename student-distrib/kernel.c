@@ -12,6 +12,8 @@
 #include "service_irq.h"
 #include "paging.h"
 #include "rtc.h"
+#include "terminal.h"
+#include "file_dir.h"
 #include "sys_call.h"
 
 #define RUN_TESTS
@@ -181,8 +183,9 @@ void entry(unsigned long magic, unsigned long addr) {
     /* Execute the first program ("shell") ... */
 	
 	int x = 512;
+	unsigned char r[4] = "RTC";
 	
-	rtc_open("RTC");
+	rtc_open(r);
 	rtc_write(1, &x, 0);
 	while(1){
 		rtc_read(1, &x, 0);

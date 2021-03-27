@@ -8,7 +8,10 @@
 #define MAX_FILE 		8
 
 /* strings used for specific devices */
-#define RTC_NAME 		"rtc"
+#define RTC_NAME 			"rtc"
+#define RTC_NAME_LEN 		4
+#define TERMINAL_NAME		"terminal"
+#define TERMINAL_NAME_LEN 	9
 
 /* the entry to the file array filled on a "open" system call */
 typedef struct file_array_entry {

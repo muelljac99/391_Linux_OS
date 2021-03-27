@@ -9,7 +9,7 @@
 #include "rtc.h"
 
 /* flag telling when the rtc interrupt has occurred */
-int rtc_flag = 0;
+volatile int rtc_flag = 0;
 
 /* 
  * init_rtc
@@ -65,6 +65,15 @@ void handle_rtc(void){
 	inb(RTC_PORT+1); 				//read it so the next interrupts will come
 }
 
+/* 
+ * rtc_open
+ *   DESCRIPTION: The rtc open driver function. This function will set the frequency of the rtc interrupt
+ * 				  to 2Hz as a default.
+ *   INPUTS: filename -- unused
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on failure
+ *   SIDE EFFECTS: writes to the rtc registers
+ */
 int32_t rtc_open(const uint8_t* filename){
 	unsigned int flags;
 	
@@ -79,30 +88,61 @@ int32_t rtc_open(const uint8_t* filename){
 	return 0;
 }
 
+/* 
+ * rtc_close
+ *   DESCRIPTION: The rtc close driver function. This function only signifies that the rtc device has been closed
+ *   INPUTS: fd -- unused
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on failure
+ *   SIDE EFFECTS: none
+ */
 int32_t rtc_close(int32_t fd){
 	//does nothing
 	return 0;
 }
 
-int32_t rtc_read(int32_t fd, int* buf, int32_t nbytes){
+/* 
+ * rtc_read
+ *   DESCRIPTION: The rtc read driver function. This function will wait for an rtc interrupt and
+ * 				  return once one has been received.
+ *   INPUTS: fd -- unused
+ * 			 buf -- unused
+ * 			 nbytes -- unused
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on failure
+ *   SIDE EFFECTS: changes the volatile rtc_flag
+ */
+int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
 	rtc_flag = 1;
 	//wait until rtc interrupt returns the flag to 0
 	while(rtc_flag != 0);
 	return 0;
 }
 
-int32_t rtc_write(int32_t fd, const int* buf, int32_t nbytes){
+/* 
+ * rtc_open
+ *   DESCRIPTION: The rtc write driver function. This function will set the frequency of the rtc interrupt
+ * 				  to a specified power of 2 value.
+ *   INPUTS: fd -- unused
+ * 			 buf -- a pointer to an int that holds the desired frequency
+ * 			 nbytes -- unused
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on failure
+ *   SIDE EFFECTS: writes to the rtc registers
+ */
+int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
+	int32_t* freq_ptr = (int32_t*)buf;
 	int32_t freq;
 	unsigned int flags;
 	int match = 2;
 	char rate = 0x0F;
 	
 	//check that its not a NULL ptr
-	if(buf == NULL){
+	if(freq_ptr == NULL){
 		return -1;
 	}
 	else{
-		freq = (int32_t)(*buf);
+		freq = (*freq_ptr);
 	}
 	
 	if(freq <= 1 || freq > 1024){
