@@ -7,10 +7,16 @@
 
 #include "types.h"
 
+/* VGA Port Values */
+#define VGA_CTRC		0x3D4
+#define CURSOR_LOC		0x0F
+
 int get_x(void);
 int get_y(void);
 void set_x(int x);
 void set_y(int y);
+void line_shift(void);
+void update_cursor(int x, int y);
 
 int32_t printf(int8_t *format, ...);
 void putc(uint8_t c);

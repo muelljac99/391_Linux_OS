@@ -62,6 +62,20 @@ void line_shift(void){
 	return;
 }
 
+/* void update_cursor(int x, int y);
+ * Inputs: x, y -- the location on the screen to place the cursor
+ * Return Value: none
+ * Function: A function that sets the cursor location using VGA registers */
+void update_cursor(int x, int y){
+	uint16_t pos = (y*NUM_COLS)+x;
+	
+	//set the VGA registers to update the cursor
+	outb(CURSOR_LOC, VGA_CTRC);							//set high bits
+	outb((uint8_t)(pos & 0xFF), VGA_CTRC+1);
+	outb(CURSOR_LOC - 1, VGA_CTRC);						//set low bits
+	outb((uint8_t)((pos >> 8) & 0xFF), VGA_CTRC+1);
+}
+
 /* void clear(void);
  * Inputs: void
  * Return Value: none
@@ -74,6 +88,7 @@ void clear(void) {
     }
 	screen_x = 0;
 	screen_y = 0;
+	update_cursor(screen_x, screen_y);
 }
 
 /* Standard printf().
@@ -242,6 +257,7 @@ void putc(uint8_t c) {
         //screen_x %= NUM_COLS;
         //screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
     }
+	update_cursor(screen_x, screen_y);
 }
 
 /* int8_t* itoa(uint32_t value, int8_t* buf, int32_t radix);

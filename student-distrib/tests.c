@@ -189,11 +189,11 @@ void garbage_irq_test(){
 void launch_tests(){
 	TEST_OUTPUT("idt_test", idt_test());
 	// launch your tests here
-	sys_call_test();
+	//sys_call_test();
 	//undefined_int_test();
 	//divide_by_0_test();
 	//page_fault_test();
 	//page_fault_test2();
-	TEST_OUTPUT("defined_page_test", defined_page_test());
-	garbage_irq_test();
+	//TEST_OUTPUT("defined_page_test", defined_page_test());
+	//garbage_irq_test();
 }

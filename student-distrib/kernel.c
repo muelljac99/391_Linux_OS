@@ -27,6 +27,9 @@
 void entry(unsigned long magic, unsigned long addr) {
 
     multiboot_info_t *mbi;
+	
+	uint32_t* file_sys_start;
+	module_t* file_sys;
 
     /* Clear the screen. */
     clear();
@@ -146,8 +149,6 @@ void entry(unsigned long magic, unsigned long addr) {
 	lidt(idt_desc_ptr);  // initialize the idtr
 	idt_fill();
 	
-	clear();
-	
     /* Init the PIC */
     i8259_init();
 	
@@ -182,6 +183,18 @@ void entry(unsigned long magic, unsigned long addr) {
 #endif
     /* Execute the first program ("shell") ... */
 	
+	//file system in module 0 of multiboot info
+	file_sys = (module_t*)mbi->mods_addr;
+	file_sys_start = (uint32_t)file_sys->mod_start;
+	
+	unsigned char buffer[20];
+	unsigned int size;
+	while(1){
+		size = terminal_read(0, buffer, 20);
+		terminal_write(0, buffer, size);
+	}
+	
+	/*
 	int x = 512;
 	unsigned char r[4] = "RTC";
 	
@@ -191,6 +204,7 @@ void entry(unsigned long magic, unsigned long addr) {
 		rtc_read(1, &x, 0);
 		printf("1");
 	}
+	*/
 
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");
