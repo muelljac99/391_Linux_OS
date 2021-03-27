@@ -22,6 +22,8 @@ We set a condition to be sure that the scan code is a value that we are prepared
 The RTC interrupt is received but it leads to an idt vector of 0x0. We think this is because the slave PIC is not initialized properly so the offset vector is not being loaded as it should.
 In our RTC handler and initialization functions we were using outb with the arguments reversed. outb(port, data) instead of outb(data, port).
 
+--------------------------------------------- END OF CHECKPOINT 1 ------------------------------------------------------
+
 	Incorrect Vertical Shift Bug #6; Found - 3/26/21 by all;
 The line_shift function is called but only shifts half of the columns of video memory and prints a strange green line halfway down the screen.
 We were not accounting for the ATTRIB bytes correctly, so we doubled the number of columns in our for loop to account for the second byte for each character, ATTRIB.
@@ -29,3 +31,5 @@ We were not accounting for the ATTRIB bytes correctly, so we doubled the number 
 	Backspace Breaks the Top Line Bug #7; Found - 3/26/21 by all;
 When pressing backspace on the keyboard it works as expected until we reach screen_x = 0 and screen_y = 1. It will return to the line above once, and then will not allow us to backspace again, only type letters on the next line.
 We needed to set screen_x to be 79 instead of 80 since this was not a printable location.
+
+-------------------------------------------- END OF CHECKPOINT 2 -------------------------------------------------------
