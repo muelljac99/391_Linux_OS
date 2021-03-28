@@ -119,6 +119,7 @@ int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
 	return 0;
 }
 
+
 /* 
  * rtc_open
  *   DESCRIPTION: The rtc write driver function. This function will set the frequency of the rtc interrupt

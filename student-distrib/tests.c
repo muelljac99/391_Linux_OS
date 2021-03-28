@@ -4,6 +4,9 @@
 #include "irq_asm.h"
 #include "paging.h"
 #include "i8259.h"
+#include "rtc.h"
+#include "terminal.h"
+#include "file_dir.h"
 
 #define PASS 1
 #define FAIL 0
@@ -177,9 +180,56 @@ void garbage_irq_test(){
 	send_eoi(0x71);
 }
 
-// add more tests here
-
 /* Checkpoint 2 tests */
+
+void rtc_write_test(int freq){
+	unsigned char r[4] = "RTC";
+	
+	rtc_open(r);
+	rtc_write(1, &freq, 0);
+	while(1){
+		rtc_read(1, &freq, 0);
+		printf("1");
+	}
+}
+
+void terminal_echo_test(){
+	unsigned char buffer[20];
+	unsigned int size;
+	while(1){
+		size = terminal_read(0, buffer, 20);
+		terminal_write(0, buffer, size);
+	}
+}
+
+void file_read_test(){
+	uint8_t filename[128];
+	uint8_t term_name[9] = "terminal";
+	uint8_t buffer[8192];
+	uint32_t read_len, name_len;
+	terminal_open(term_name);
+	name_len = terminal_read(0, filename, 33);
+	terminal_write(0, filename, name_len);
+	file_open(filename);
+	read_len = file_read(1, buffer, 100);
+	file_close(0);
+	printf("Bytes Read: %d\n", read_len);
+	terminal_write(0, buffer, read_len);
+}
+
+void dir_read_test(){
+	uint8_t buffer[8192];
+	int i;
+	uint8_t dir[2] = ".";
+	uint8_t term[9] = "terminal";
+	dir_open(dir);
+	terminal_open(term);
+	for(i=0; i<(*file_sys_addr); i++){
+		dir_read(0, buffer, 80);
+		terminal_write(0, buffer, 80);
+	}
+}
+
 /* Checkpoint 3 tests */
 /* Checkpoint 4 tests */
 /* Checkpoint 5 tests */
@@ -188,7 +238,7 @@ void garbage_irq_test(){
 /* Test suite entry point */
 void launch_tests(){
 	TEST_OUTPUT("idt_test", idt_test());
-	// launch your tests here
+	/* checkpoint 1 tests */
 	//sys_call_test();
 	//undefined_int_test();
 	//divide_by_0_test();
@@ -196,4 +246,10 @@ void launch_tests(){
 	//page_fault_test2();
 	//TEST_OUTPUT("defined_page_test", defined_page_test());
 	//garbage_irq_test();
+	
+	/* checkpoint 2 tests */
+	//rtc_write_test(512);
+	//terminal_echo_test();
+	dir_read_test();
+	file_read_test();
 }

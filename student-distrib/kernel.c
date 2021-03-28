@@ -28,7 +28,6 @@ void entry(unsigned long magic, unsigned long addr) {
 
     multiboot_info_t *mbi;
 	
-	uint32_t* file_sys_start;
 	module_t* file_sys;
 
     /* Clear the screen. */
@@ -158,6 +157,10 @@ void entry(unsigned long magic, unsigned long addr) {
 	// intialize the keyboard
 	init_keyboard();
 	
+	// get the file system start address from the multiboot info
+	file_sys = (module_t*)mbi->mods_addr;
+	file_sys_addr = (uint32_t*)file_sys->mod_start;
+	
 	// load the starting info into the page directory and table
 	load_page();
 	
@@ -182,29 +185,6 @@ void entry(unsigned long magic, unsigned long addr) {
     launch_tests();
 #endif
     /* Execute the first program ("shell") ... */
-	
-	//file system in module 0 of multiboot info
-	file_sys = (module_t*)mbi->mods_addr;
-	file_sys_start = (uint32_t)file_sys->mod_start;
-	
-	unsigned char buffer[20];
-	unsigned int size;
-	while(1){
-		size = terminal_read(0, buffer, 20);
-		terminal_write(0, buffer, size);
-	}
-	
-	/*
-	int x = 512;
-	unsigned char r[4] = "RTC";
-	
-	rtc_open(r);
-	rtc_write(1, &x, 0);
-	while(1){
-		rtc_read(1, &x, 0);
-		printf("1");
-	}
-	*/
 
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");

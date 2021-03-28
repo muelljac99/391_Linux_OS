@@ -86,6 +86,7 @@ int32_t do_sys_call(int call_num, uint32_t arg1, uint32_t arg2, uint32_t arg3){
  */
 int32_t __sys_open__(const uint8_t* filename){
 	int fd;
+	dentry_t dentry;
 	unsigned char rtc[RTC_NAME_LEN] = RTC_NAME;
 	unsigned char term[TERMINAL_NAME_LEN] = TERMINAL_NAME;
 	
@@ -130,11 +131,42 @@ int32_t __sys_open__(const uint8_t* filename){
 	}
 	
 	else{
-		// if not those two devices then it is a file or directory in file system
-		// ****************
+		if(read_dentry_by_name(filename, &dentry) == -1){
+			//no matching file
+			return -1;
+		}
+		if(dentry.file_type == 1){
+			//this is a directory
+			file_array[fd].dev_open = dir_open;
+			file_array[fd].dev_close = dir_close;
+			file_array[fd].dev_read = dir_read;
+			file_array[fd].dev_write = dir_write;
+			file_array[fd].inode = 0;				//unused
+			file_array[fd].file_pos = 0; 			//unused
+			file_array[fd].present = 1;
+			
+			// run directory open now
+			(*file_array[fd].dev_open)(filename);
+		}
+		else if(dentry.file_type == 2){
+			//this is a normal file
+			file_array[fd].dev_open = file_open;
+			file_array[fd].dev_close = file_close;
+			file_array[fd].dev_read = file_read;
+			file_array[fd].dev_write = file_write;
+			file_array[fd].inode = dentry.inode_num;
+			file_array[fd].file_pos = 0;			//starts at 0
+			file_array[fd].present = 1;
+			
+			// run file open now
+			(*file_array[fd].dev_open)(filename);
+		}
+		else{
+			//invalid file type
+			return -1;
+		}
 	}
-	
-	return 0;
+	return fd;
 }
 
 /* 

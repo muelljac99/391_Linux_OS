@@ -242,7 +242,11 @@ void putc(uint8_t c) {
 			line_shift();
 			screen_y--;
 		}
-    } else {
+    }
+	else if(c == '\0'){
+		return;
+	}
+	else {
         *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = c;
         *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB;
         screen_x++;

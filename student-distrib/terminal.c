@@ -86,6 +86,10 @@ void handle_keyboard(void){
 		terminal_flag = 0;
 	}
 	else if(scan == BACKSPACE){
+		//don't backspace if keyboard buffer is empty
+		if(key_buf_size == 0){
+			return;
+		}
 		// move the screen location back one
 		if(get_x() == 0){
 			if(get_y() != 0){
@@ -204,6 +208,9 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes){
 			read_buf[i] = key_buf[i];
 		}
 	}
+	
+	//clear the keyboard buffer
+	key_buf_size = 0;
 	return i;
 }
 

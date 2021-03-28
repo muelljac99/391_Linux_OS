@@ -22,10 +22,10 @@ typedef struct file_array_entry {
 	uint32_t inode;
 	uint32_t file_pos;
 	uint32_t present;
-} file_array_entry;
+} file_array_entry_t;
 
 /* file array holding information about any open device, directory, or file */
-file_array_entry file_array[MAX_FILE];
+file_array_entry_t file_array[MAX_FILE];
 
 /* the general system call function that determines the type of call and performs the necessary operation */
 int32_t do_sys_call(int call_num, uint32_t arg1, uint32_t arg2, uint32_t arg3);
