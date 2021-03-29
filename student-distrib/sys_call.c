@@ -22,48 +22,56 @@ int32_t do_sys_call(int call_num, uint32_t arg1, uint32_t arg2, uint32_t arg3){
 	switch(call_num){
 		case 1:
 			//halt
-			printf("HALT SYSTEM CALL");
+			printf("HALT SYSTEM CALL\n");
 			return -1;
 			
 		case 2:
 			//execute
-			printf("EXECUTE SYSTEM CALL");
+			printf("EXECUTE SYSTEM CALL\n");
 			return -1;
 			
 		case 3:
 			//read
-			return __sys_read__((int32_t)arg1, (void*)arg2, (int32_t)arg3);
+			printf("READ SYSTEM CALL\n");
+			return -1;
+			//return __sys_read__((int32_t)arg1, (void*)arg2, (int32_t)arg3);
 			
 		case 4:
 			//write
-			return __sys_write__((int32_t)arg1, (void*)arg2, (int32_t)arg3);
+			printf("WRITE SYSTEM CALL\n");
+			return -1;
+			//return __sys_write__((int32_t)arg1, (void*)arg2, (int32_t)arg3);
 			
 		case 5:
 			//open
-			return __sys_open__((uint8_t*)arg1);
+			printf("OPEN SYSTEM CALL\n");
+			return -1;
+			//return __sys_open__((uint8_t*)arg1);
 			
 		case 6:
 			//close
-			return __sys_close__((int32_t)arg1);
+			printf("CLOSE SYSTEM CALL\n");
+			return -1;
+			//return __sys_close__((int32_t)arg1);
 			
 		case 7:
 			//getargs
-			printf("GETARGS SYSTEM CALL");
+			printf("GETARGS SYSTEM CALL\n");
 			return -1;
 			
 		case 8:
 			//vidmap
-			printf("VIDMAP SYSTEM CALL");
+			printf("VIDMAP SYSTEM CALL\n");
 			return -1;
 			
 		case 9:
 			//set_handler
-			printf("SET_HANDLER SYSTEM CALL");
+			printf("SET_HANDLER SYSTEM CALL\n");
 			return -1;
 			
 		case 10:
 			//sigreturn
-			printf("SIGRETURN SYSTEM CALL");
+			printf("SIGRETURN SYSTEM CALL\n");
 			return -1;
 			
 			

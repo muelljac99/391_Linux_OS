@@ -135,8 +135,8 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
 	int32_t* freq_ptr = (int32_t*)buf;
 	int32_t freq;
 	unsigned int flags;
-	int match = 2;
-	char rate = 0x0F;
+	int match = 2;				//the frequency corresponding to the specified rate value
+	char rate = 0x0F;			//rate of 0x0F corresponds to 2Hz
 	
 	//check that its not a NULL ptr
 	if(freq_ptr == NULL){
@@ -147,7 +147,7 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
 	}
 	
 	if(freq <= 1 || freq > 1024){
-		//frequency is out of bounds
+		//frequency is out of bounds (max is 1024 Hz)
 		return -1;
 	}
 	else if((freq&(freq-1)) == 0){

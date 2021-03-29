@@ -164,16 +164,42 @@ void init_keyboard(void){
 	enable_irq(KEYBOARD_IRQ);
 }
 
+/* 
+ * terminal_open
+ *   DESCRIPTION: Terminal driver open function that does nothing
+ *   INPUTS: filename -- unused
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on fail
+ *   SIDE EFFECTS: none
+ */
 int32_t terminal_open(const uint8_t* filename){
 	// does nothing
 	return 0;
 }
 
+/* 
+ * terminal_close
+ *   DESCRIPTION: Terminal driver close function that does nothing
+ *   INPUTS: fd -- unused
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on fail
+ *   SIDE EFFECTS: none
+ */
 int32_t terminal_close(int32_t fd){
 	// does nothing
 	return 0;
 }
 
+/* 
+ * terminal_read
+ *   DESCRIPTION: Terminal driver read function that takes input from the keyboard buffer and writes into
+ * 				  the terminal buffer upon an enter press.
+ *   INPUTS: fd -- unused
+ *			 nbytes -- the number of bytes to read from the keyboard buffer
+ *   OUTPUTS: buf -- the buffer that the function writes into
+ *   RETURN VALUE: number of bytes read
+ *   SIDE EFFECTS: clears the keyboard buffer
+ */
 int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes){
 	unsigned char* read_buf = (unsigned char*)buf;
 	int i, size;
@@ -214,6 +240,16 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes){
 	return i;
 }
 
+/* 
+ * terminal_write
+ *   DESCRIPTION: Terminal driver write function that writes the given buffer to the screen
+ *   INPUTS: fd -- unused
+ * 			 buf -- the input buffer containing the characters to be written to the screen
+ * 			 nbytes -- the number of bytes to write to the screen
+ *   OUTPUTS: none
+ *   RETURN VALUE: number of bytes written to the screen
+ *   SIDE EFFECTS: none
+ */
 int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes){
 	unsigned char* write_buf = (unsigned char*)buf;
 	int i;
@@ -230,6 +266,15 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes){
 	return i;
 }
 
+/* 
+ * buf_fill
+ *   DESCRIPTION: Helper function used to add a character to the keyboard buffer and keep track
+ * 				  of the size of the keyboard buffer
+ *   INPUTS: add -- the character to be added to the keyboard buffer
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: may add values to the keyboard buffer
+ */
 void buf_fill(unsigned char add){
 	// need to save space for a newline at the end of the buffer
 	if(key_buf_size < BUF_SIZE_MAX){

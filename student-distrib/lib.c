@@ -52,7 +52,9 @@ void set_y(int y){
  * Function: A function that moves all the data in the video memory up a line */
 void line_shift(void){
 	int j;
+	//move bottom 24 lines up one line
 	memmove(video_mem, video_mem + (2*NUM_COLS), (NUM_ROWS-1)*(2*NUM_COLS));
+	//make remaining line all blank
 	for(j=0; j<2*NUM_COLS; j++){
 		if(j%2 == 0)
 			video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ' ';
@@ -88,6 +90,7 @@ void clear(void) {
     }
 	screen_x = 0;
 	screen_y = 0;
+	//move the cursor to the top of the screen
 	update_cursor(screen_x, screen_y);
 }
 
@@ -243,6 +246,7 @@ void putc(uint8_t c) {
 			screen_y--;
 		}
     }
+	//don't print null characters
 	else if(c == '\0'){
 		return;
 	}
@@ -261,6 +265,7 @@ void putc(uint8_t c) {
         //screen_x %= NUM_COLS;
         //screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
     }
+	//move the cursor to the next space on the screen
 	update_cursor(screen_x, screen_y);
 }
 

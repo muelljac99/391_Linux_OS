@@ -182,26 +182,59 @@ void garbage_irq_test(){
 
 /* Checkpoint 2 tests */
 
+/* RTC Write Test
+ * 
+ * Checks that opening the RTC sets it to 2Hz, a write can be performed of any frequency and checks will
+ * 		be made that the frequency is valid, and a read will wait until an interrupt to return
+ * Inputs: freq - the desired frequency of the rtc interrupt
+ * Outputs: print 1 at the set frequency or 2Hz if invalid frequency
+ * Side Effects: Prints to screen
+ * Coverage: Proper RTC driver functionality and bad input handling
+ * Files: rtc.h/c
+ */
 void rtc_write_test(int freq){
 	unsigned char r[4] = "RTC";
 	
 	rtc_open(r);
-	rtc_write(1, &freq, 0);
+	if(rtc_write(1, &freq, 0) == -1){
+		printf("INVALID INPUT FREQUENCY\n");
+	}
 	while(1){
 		rtc_read(1, &freq, 0);
 		printf("1");
 	}
 }
 
+/* Terminal Echo Test
+ * 
+ * Checks that the terminal read will gather all keyboard inputs and will not crash for any key press. Checks
+ * 		that the read will only return on an enter press. Checks that the write function will print the buffer to the screen.
+ * Inputs: none
+ * Outputs: repeats the first 128 characters typed before pressing enter
+ * Side Effects: Prints to screen
+ * Coverage: Tests the terminal read and terminal write functionality and the keyboard press bad inputs and range
+ * Files: terminal.h/c
+ */
 void terminal_echo_test(){
-	unsigned char buffer[20];
+	unsigned char buffer[130];
 	unsigned int size;
 	while(1){
-		size = terminal_read(0, buffer, 20);
+		size = terminal_read(0, buffer, 130);
 		terminal_write(0, buffer, size);
 	}
 }
 
+/* File Read Test
+ * 
+ * Checks that a filename can be given by use of the terminal read and that the file can then be read using the file
+ * 		read and terminal write functions.
+ * Inputs: none
+ * Outputs: the echoed filename input, if a valid file then the bytes read from it and the file data, if invlid then
+ *			an invalid error message
+ * Side Effects: Prints to screen
+ * Coverage: Tests the terminal read and terminal write functionality and the file open and file read functionality
+ * Files: terminal.h/c; file_dir.h/c
+ */
 void file_read_test(){
 	uint8_t filename[128];
 	uint8_t term_name[9] = "terminal";
@@ -211,12 +244,34 @@ void file_read_test(){
 	name_len = terminal_read(0, filename, 33);
 	terminal_write(0, filename, name_len);
 	file_open(filename);
-	read_len = file_read(1, buffer, 100);
-	file_close(0);
+	read_len = file_read(1, buffer, 40);
 	printf("Bytes Read: %d\n", read_len);
 	terminal_write(0, buffer, read_len);
+	
+	// include this following part to test the file position being maintained
+	
+	/*
+	read_len = file_read(1, buffer, 40);
+	printf("Bytes Read: %d\n", read_len);
+	terminal_write(0, buffer, read_len);
+	read_len = file_read(1, buffer, 40);
+	printf("Bytes Read: %d\n", read_len);
+	terminal_write(0, buffer, read_len);
+	read_len = file_read(1, buffer, 40);
+	printf("Bytes Read: %d\n", read_len);
+	terminal_write(0, buffer, read_len);
+	*/
 }
 
+/* Directory Read Test
+ * 
+ * Checks that the info for each entry in the directory can be provided and written to the screen.
+ * Inputs: none
+ * Outputs: the file name, file type, and file size of each file in the directory
+ * Side Effects: Prints to screen
+ * Coverage: Tests the terminal write functionality and the directory open and directory read functionality
+ * Files: terminal.h/c; file_dir.h/c
+ */
 void dir_read_test(){
 	uint8_t buffer[8192];
 	int i;
@@ -248,8 +303,8 @@ void launch_tests(){
 	//garbage_irq_test();
 	
 	/* checkpoint 2 tests */
-	//rtc_write_test(512);
-	//terminal_echo_test();
-	dir_read_test();
-	file_read_test();
+	//rtc_write_test(55);
+	terminal_echo_test();
+	//dir_read_test();
+	//file_read_test();
 }
