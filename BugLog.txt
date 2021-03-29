@@ -36,4 +36,7 @@ Solved: We needed to set screen_x to be 79 instead of 80 since this was not a pr
 When using file_read() in our tests it does not print anything to the screen when printing using the terminal_write() function. 
 Solved: Our file_read() function was not returning the number of bytes read and thus the terminal_write() function was printing 0 bytes.
 
+	Large file reads don't print correctly Bug #9; Found - 3/28/21 by all;
+Reading from large files only writes a small amount of data to the screen, but if we only read part of the file it works as intended. 
+Solved: When reading data from large files we would switch between data blocks and thus overwrite our buffer from index 0. So we needed to add the length that was already written to the index in the buffer.
 -------------------------------------------- END OF CHECKPOINT 2 -------------------------------------------------------
