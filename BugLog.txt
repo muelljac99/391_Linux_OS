@@ -1,31 +1,39 @@
 	Example Bug #0; Found - 3/20/21 by Tim Green; Resolved - 3/20/21 by Tim Green
 This line should hold the description of the bug. Try to make it is informative as possible so we all know what's going on for everyone's work.
-This line should be filled in after the bug is resolved with the method used to resolve the bug or the key mistake we were making.
+Solved: This line should be filled in after the bug is resolved with the method used to resolve the bug or the key mistake we were making.
 
 	IDT Initialization Function Ptr Array Const Bug #1; Found - 3/20/21 by Tim Green; Resolved - 3/20/21 by Tim Green
 The idt should have descriptor entries filled with the function ptr to the assembly linkage code provided in irq_asm.S. I have been attempting to allow this ptr access through the use of an array of function ptrs. The array throws an error saying the elements are not constant. The function ptrs can be used as is within the idt_fill function and the idt test will pass but I don't want to have to type out all 256 function ptrs in the fill function.
-I switched the array to be defined within the .S file instead of the .h file and using a list of longs directly in the file. This seems like a very inefficient method of creating these ptrs but I don't have any other ideas and this seems to work. Now need to finish the common_int function and start writing the do_irq function to handle exceptions, interrupts, and system calls.
+Solved: I switched the array to be defined within the .S file instead of the .h file and using a list of longs directly in the file. This seems like a very inefficient method of creating these ptrs but I don't have any other ideas and this seems to work. Now need to finish the common_int function and start writing the do_irq function to handle exceptions, interrupts, and system calls.
 
 	IDT Test Runs Twice Bug #2; Found - 3/20/21 by Tim/Zayd; Resolved by 3/21/21 by all
 The IDT test when running the irq_handle[80] function will print out SYTEM CALL and EXCEPTION #D so it is running through do_irq a second time with the irq value of 0xD for some reason.
-Need to call int instead of just the interrupt function
+Solved: Need to call int instead of just the interrupt function
 
 	Not Printing Keys Bug #3; Found - 3/21/21 by all; Resolved - 3/21/21 by all
 Using an INT would allow for an interrupt but pressing keys does not.
-STI was not called so the OS was not allowing any normal interrupts and instead only taking the forced interrupts.
+Solved: STI was not called so the OS was not allowing any normal interrupts and instead only taking the forced interrupts.
 
 	Printing on Release Bug #4; Found - 3/21/21 by all; Resolved - 3/21/21 by all
 The handler would call the putc for any keycode even on release and put many random characters on the screen.
-We set a condition to be sure that the scan code is a value that we are prepared to handle otherwise it does not print anything.
+Solved: We set a condition to be sure that the scan code is a value that we are prepared to handle otherwise it does not print anything.
 
 	RTC Interrupt Leads to Exception 0 Bug #5; Found - 3/21/21 by all;
 The RTC interrupt is received but it leads to an idt vector of 0x0. We think this is because the slave PIC is not initialized properly so the offset vector is not being loaded as it should.
-In our RTC handler and initialization functions we were using outb with the arguments reversed. outb(port, data) instead of outb(data, port).
+Solved: In our RTC handler and initialization functions we were using outb with the arguments reversed. outb(port, data) instead of outb(data, port).
+
+--------------------------------------------- END OF CHECKPOINT 1 ------------------------------------------------------
 
 	Incorrect Vertical Shift Bug #6; Found - 3/26/21 by all;
 The line_shift function is called but only shifts half of the columns of video memory and prints a strange green line halfway down the screen.
-We were not accounting for the ATTRIB bytes correctly, so we doubled the number of columns in our for loop to account for the second byte for each character, ATTRIB.
+Solved: We were not accounting for the ATTRIB bytes correctly, so we doubled the number of columns in our for loop to account for the second byte for each character, ATTRIB.
 
 	Backspace Breaks the Top Line Bug #7; Found - 3/26/21 by all;
 When pressing backspace on the keyboard it works as expected until we reach screen_x = 0 and screen_y = 1. It will return to the line above once, and then will not allow us to backspace again, only type letters on the next line.
-We needed to set screen_x to be 79 instead of 80 since this was not a printable location.
+Solved: We needed to set screen_x to be 79 instead of 80 since this was not a printable location.
+
+	file_read test doesn't work Bug #8; Found - 3/28/21 by all;
+When using file_read() in our tests it does not print anything to the screen when printing using the terminal_write() function. 
+Solved: Our file_read() function was not returning the number of bytes read and thus the terminal_write() function was printing 0 bytes.
+
+-------------------------------------------- END OF CHECKPOINT 2 -------------------------------------------------------
