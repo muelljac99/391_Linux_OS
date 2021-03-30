@@ -1,4 +1,3 @@
-
 #include "multiboot.h"
 #include "x86_desc.h"
 #include "lib.h"
@@ -187,7 +186,7 @@ int32_t terminal_open(const uint8_t* filename){
  */
 int32_t terminal_close(int32_t fd){
 	// does nothing
-	return 0;
+	return -1;
 }
 
 /* 
