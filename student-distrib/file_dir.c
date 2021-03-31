@@ -64,6 +64,9 @@ int32_t file_read(int32_t fd, void* buf, int32_t nbytes){
 	if(file_dentry.file_type != TYPE_FILE){
 		return -1;
 	}
+	if (strlen(read_buf) > NAME_LEN) {
+		return -1;
+	}
 	//check that buffer is valid
 	if(read_buf == NULL){
 		return -1;
