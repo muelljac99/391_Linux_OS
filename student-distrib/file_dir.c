@@ -25,6 +25,8 @@ uint32_t dir_index;
  *   SIDE EFFECTS: sets the read location to start at the beginning of the file
  */
 int32_t file_open(const uint8_t* filename){
+	//int8_t* filename_copy = filename;
+	
 	read_dentry_by_name(filename, &file_dentry);
 	//check that the requested is a file
 	if(file_dentry.file_type != TYPE_FILE){
@@ -62,9 +64,6 @@ int32_t file_read(int32_t fd, void* buf, int32_t nbytes){
 	uint32_t read_len;
 	//check that the file has already been opened and is correct type
 	if(file_dentry.file_type != TYPE_FILE){
-		return -1;
-	}
-	if (strlen(read_buf) > NAME_LEN) {
 		return -1;
 	}
 	//check that buffer is valid
@@ -193,10 +192,10 @@ int32_t dir_write(int32_t fd, const void* buf, int32_t nbytes){
  *   SIDE EFFECTS: none
  */
 int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry){
-	uint8_t filename[NAME_LEN] = "";			//the copied fname that can be edited
-	uint32_t num_dir;							//the total number of directory entries
+	uint8_t filename[2*NAME_LEN] = "";					//the copied fname that can be edited
+	uint32_t num_dir;									//the total number of directory entries
 	int i;
-	uint32_t comp_len;							//the length of the file name to be compared
+	uint32_t comp_len;									//the length of the file name to be compared
 	dentry_t* curr;
 	
 	//check for valid name and directory entry ptr
@@ -204,22 +203,32 @@ int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry){
 		return -1;
 	}
 	
+	
 	//get the minimum of the filename length and the max 32 bytes
-	if(strlen((int8_t*)fname) < NAME_LEN){
+	if(strlen((int8_t*)fname) < 2*NAME_LEN){
 		comp_len = strlen((int8_t*)fname);
 	}
 	else{
-		comp_len = NAME_LEN;
+		comp_len = 2*NAME_LEN;
 	}
 	
 	//remove any newline characters from the name
 	for(i=0; i<comp_len; i++){
 		if(fname[i] == '\n'){
 			filename[i] = '\0';
+			// Limit length of filename to i, the location of the first newline character.
+			comp_len = i;
+			break;
 		}
 		else{
 			filename[i] = fname[i];
 		}
+	}
+	
+	// Check that length of filename is within NAME_LEN
+	if (strlen((int8_t*)filename) > NAME_LEN) {
+		printf("NO FILE MATCH FOUND, FILENAME IS TOO LONG!\n");
+		return -1;
 	}
 	
 	//get the first directory entry

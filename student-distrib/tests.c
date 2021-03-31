@@ -241,10 +241,11 @@ void file_read_test(){
 	uint8_t buffer[8192];
 	uint32_t read_len, name_len;
 	terminal_open(term_name);
-	name_len = terminal_read(0, filename, 33);
+	name_len = terminal_read(0, filename, 34);
+	printf("The number of bytes read is : %d\n", name_len);
 	terminal_write(0, filename, name_len);
 	file_open(filename);
-	read_len = file_read(1, buffer, 40);
+	read_len = file_read(1, buffer, 150);
 	printf("Bytes Read: %d\n", read_len);
 	terminal_write(0, buffer, read_len);
 	
@@ -304,7 +305,7 @@ void launch_tests(){
 	
 	/* checkpoint 2 tests */
 	//rtc_write_test(55);
-	terminal_echo_test();
+	//terminal_echo_test();
 	//dir_read_test();
-	//file_read_test();
+	file_read_test();
 }
