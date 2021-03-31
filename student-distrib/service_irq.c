@@ -53,7 +53,9 @@ int32_t do_irq(pt_regs_t* reg){
 		while(1);
 	}
 	else if(irq == SYS_CALL_IRQ){
-		do_sys_call(reg->EAX, reg->EBX, reg->ECX, reg->EDX);
+		// shouldn't get to the common_irq from int 0x80 so this is an error
+		printf("SYSTEM CALL ASSEMBLY LINKAGE ERROR");
+		return -1;
 	}
 	else if(irq >= BASE_INT && irq <= PIC_IRQ_MAX){
 		// this is a PIC interrupt

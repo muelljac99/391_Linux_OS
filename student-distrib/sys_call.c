@@ -6,79 +6,80 @@
 #include "terminal.h"
 #include "file_dir.h"
 
+int32_t sys_halt(uint8_t status){
+	return -1;
+}
+
+int32_t sys_execute(const uint8_t* command){
+	uint32_t command_len = strlen((int8_t*) command);
+	uint32_t word_flag = 0;
+	uint32_t word_break;
+	uint8_t exe[ARG_BUF_SIZE] = "";
+	uint8_t args[ARG_BUF_SIZE] = "";
+	int i;
+	//split up by spaces to get executable word and arguments
+	for(i=0; i<command_len; i++){
+		if((command[i] == ' ')&&(word_flag == 0)){
+			word_break = i+1;
+			word_flag = 1;
+		}
+		else if(word_flag == 0){
+			exe[i] = command[i];
+		}
+		else{
+			args[i-word_break] = command[i];
+		}
+	}
+	return -1;
+}
+
 /* 
- * do_sys_call
- *   DESCRIPTION: This is the common C function for all system calls. This function determines which
- * 				  type of call it is and performs any general operation as well as the device specific operations
- *   INPUTS: call_num -- the number that corresponds to which type of system call it is
- * 			 arg1 -- the first possible argument for the call (may or may not be used)
- * 			 arg2 -- the second possible argument for the call (may or may not be used)
- * 			 arg3 -- the third possible argument for the call (may or may not be used)
+ * __sys_read__
+ *   DESCRIPTION: This is the common C function for all read system calls. This function performs a
+ * 				  specific read function if a valid file array entry is specified
+ *   INPUTS: fd -- the file descriptor or index to the file array of the device to be read
+ * 			 buf -- a buffer of unknown type that may be filled by the read function
+ * 			 nbytes -- the number of bytes to be read and filled into the buf
  *   OUTPUTS: none
  *   RETURN VALUE: 0 on success, -1 on failure
- *   SIDE EFFECTS: may edit file array
+ *   SIDE EFFECTS: may overwrite the contents of buf
  */
-int32_t do_sys_call(int call_num, uint32_t arg1, uint32_t arg2, uint32_t arg3){
-	switch(call_num){
-		case 1:
-			//halt
-			printf("HALT SYSTEM CALL\n");
-			return -1;
-			
-		case 2:
-			//execute
-			printf("EXECUTE SYSTEM CALL\n");
-			return -1;
-			
-		case 3:
-			//read
-			printf("READ SYSTEM CALL\n");
-			return -1;
-			//return __sys_read__((int32_t)arg1, (void*)arg2, (int32_t)arg3);
-			
-		case 4:
-			//write
-			printf("WRITE SYSTEM CALL\n");
-			return -1;
-			//return __sys_write__((int32_t)arg1, (void*)arg2, (int32_t)arg3);
-			
-		case 5:
-			//open
-			printf("OPEN SYSTEM CALL\n");
-			return -1;
-			//return __sys_open__((uint8_t*)arg1);
-			
-		case 6:
-			//close
-			printf("CLOSE SYSTEM CALL\n");
-			return -1;
-			//return __sys_close__((int32_t)arg1);
-			
-		case 7:
-			//getargs
-			printf("GETARGS SYSTEM CALL\n");
-			return -1;
-			
-		case 8:
-			//vidmap
-			printf("VIDMAP SYSTEM CALL\n");
-			return -1;
-			
-		case 9:
-			//set_handler
-			printf("SET_HANDLER SYSTEM CALL\n");
-			return -1;
-			
-		case 10:
-			//sigreturn
-			printf("SIGRETURN SYSTEM CALL\n");
-			return -1;
-			
-			
-		default:
-			printf("INVALID SYSTEM CALL NUMBER: %x\n", call_num);
-			return -1;
-			
+int32_t sys_read(int32_t fd, void* buf, int32_t nbytes){
+	// check that the file descriptor is valid
+	if(fd < 0 || fd >= MAX_FILE){
+		return -1;
+	}
+	else if(file_array[fd].present == 0){
+		return -1;
+	}
+	else{
+		// if it is valid then run the corresponding read function
+		return (*file_array[fd].dev_read)(fd, buf, nbytes);
+	}
+}
+
+/* 
+ * __sys_write__
+ *   DESCRIPTION: This is the common C function for all write system calls. This function performs a
+ * 				  specific write function if a valid file array entry is specified
+ *   INPUTS: fd -- the file descriptor or index to the file array of the device to be written
+ * 			 buf -- a buffer of unknown type that may be read by the write function
+ * 			 nbytes -- the number of bytes to be written from the buf
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on failure
+ *   SIDE EFFECTS: none
+ */
+int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes){
+	// check that the file descriptor is valid
+	if(fd < 0 || fd >= MAX_FILE){
+		return -1;
+	}
+	else if(file_array[fd].present == 0){
+		return -1;
+	}
+	else{
+		// if it is valid then run the corresponding write function
+		return (*file_array[fd].dev_write)(fd, buf, nbytes);
 	}
 }
 
@@ -92,7 +93,7 @@ int32_t do_sys_call(int call_num, uint32_t arg1, uint32_t arg2, uint32_t arg3){
  *   RETURN VALUE: 0 on success, -1 on failure
  *   SIDE EFFECTS: may edit file array
  */
-int32_t __sys_open__(const uint8_t* filename){
+int32_t sys_open(const uint8_t* filename){
 	int fd;
 	dentry_t dentry;
 	unsigned char rtc[RTC_NAME_LEN] = RTC_NAME;
@@ -186,7 +187,7 @@ int32_t __sys_open__(const uint8_t* filename){
  *   RETURN VALUE: 0 on success, -1 on failure
  *   SIDE EFFECTS: may edit file array
  */
-int32_t __sys_close__(int32_t fd){
+int32_t sys_close(int32_t fd){
 	uint32_t ret_val;
 	// check that the file descriptor is valid
 	if(fd < 0 || fd >= MAX_FILE){
@@ -213,53 +214,18 @@ int32_t __sys_close__(int32_t fd){
 	}
 }
 
-/* 
- * __sys_read__
- *   DESCRIPTION: This is the common C function for all read system calls. This function performs a
- * 				  specific read function if a valid file array entry is specified
- *   INPUTS: fd -- the file descriptor or index to the file array of the device to be read
- * 			 buf -- a buffer of unknown type that may be filled by the read function
- * 			 nbytes -- the number of bytes to be read and filled into the buf
- *   OUTPUTS: none
- *   RETURN VALUE: 0 on success, -1 on failure
- *   SIDE EFFECTS: may overwrite the contents of buf
- */
-int32_t __sys_read__(int32_t fd, void* buf, int32_t nbytes){
-	// check that the file descriptor is valid
-	if(fd < 0 || fd >= MAX_FILE){
-		return -1;
-	}
-	else if(file_array[fd].present == 0){
-		return -1;
-	}
-	else{
-		// if it is valid then run the corresponding read function
-		return (*file_array[fd].dev_read)(fd, buf, nbytes);
-	}
+int32_t sys_getargs(uint8_t* buf, int32_t nbytes){
+	return -1;
 }
 
-/* 
- * __sys_write__
- *   DESCRIPTION: This is the common C function for all write system calls. This function performs a
- * 				  specific write function if a valid file array entry is specified
- *   INPUTS: fd -- the file descriptor or index to the file array of the device to be written
- * 			 buf -- a buffer of unknown type that may be read by the write function
- * 			 nbytes -- the number of bytes to be written from the buf
- *   OUTPUTS: none
- *   RETURN VALUE: 0 on success, -1 on failure
- *   SIDE EFFECTS: none
- */
-int32_t __sys_write__(int32_t fd, const void* buf, int32_t nbytes){
-	// check that the file descriptor is valid
-	if(fd < 0 || fd >= MAX_FILE){
-		return -1;
-	}
-	else if(file_array[fd].present == 0){
-		return -1;
-	}
-	else{
-		// if it is valid then run the corresponding write function
-		return (*file_array[fd].dev_write)(fd, buf, nbytes);
-	}
+int32_t sys_vidmap(uint8_t** screen_start){
+	return -1;
 }
 
+int32_t set_handler(int32_t signum, void* handler_address){
+	return -1;
+}
+
+int32_t sigreturn(void){
+	return -1;
+}

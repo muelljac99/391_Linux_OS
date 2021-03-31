@@ -5,7 +5,10 @@
 #include "types.h"
 
 /* number of possible files/devices we can have open */
-#define MAX_FILE 		8
+#define MAX_FILE 			8
+
+/* arguments buffer size */
+#define ARG_BUF_SIZE		1024
 
 /* strings used for specific devices */
 #define RTC_NAME 			"rtc"
@@ -27,13 +30,16 @@ typedef struct file_array_entry {
 /* file array holding information about any open device, directory, or file */
 file_array_entry_t file_array[MAX_FILE];
 
-/* the general system call function that determines the type of call and performs the necessary operation */
-int32_t do_sys_call(int call_num, uint32_t arg1, uint32_t arg2, uint32_t arg3);
-
 /* the subfunctions that performs the specified system call */
-int32_t __sys_open__(const uint8_t* filename);
-int32_t __sys_close__(int32_t fd);
-int32_t __sys_read__(int32_t fd, void* buf, int32_t nbytes);
-int32_t __sys_write__(int32_t fd, const void* buf, int32_t nbytes);
+int32_t sys_halt(uint8_t status);
+int32_t sys_execute(const uint8_t* command);
+int32_t sys_read(int32_t fd, void* buf, int32_t nbytes);
+int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes);
+int32_t sys_open(const uint8_t* filename);
+int32_t sys_close(int32_t fd);
+int32_t sys_getargs(uint8_t* buf, int32_t nbytes);
+int32_t sys_vidmap(uint8_t** screen_start);
+int32_t set_handler(int32_t signum, void* handler_address);
+int32_t sigreturn(void);
 
 #endif /* _SYS_CALL_H */

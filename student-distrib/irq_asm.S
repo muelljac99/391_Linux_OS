@@ -284,6 +284,10 @@ irq_handle:
 	.long irq_FD
 	.long irq_FE
 	.long irq_FF
+	
+// system call jump table
+sys_table:
+	.long sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_sethandler, sys_sigreturn
 
 /* This is the default assembly linkage that each small irq-specific code jumps to.
  * The code will save the registers and pass a pointer to the registers and irq number
@@ -334,6 +338,53 @@ ret_from_irq:
 	//return from the interrupt call
 	//leave
 	iret
+	
+// common assembly linkage function for the system calls
+common_sys_call:
+	// save all the registers (no save for eax - holds return value)
+	pushw %fs
+	pushw $0
+	pushw %es
+	pushw $0
+	pushw %ds
+	pushw $0
+	pushl %ebp
+	pushl %edi
+	pushl %esi
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	
+	// check for valid system call number
+	cmpl $0, %eax
+	jle sys_fail
+	cmpl $10, %eax
+	jg sys_fail
+	
+	// decrement eax so call number 1 matches with halt
+	decl %eax
+	
+	// already have the arguments pushed to the stack
+	call *sys_table(0, %eax, 4)
+	
+	//restore the registers
+	popl %ebx
+	popl %ecx
+	popl %edx
+	popl %esi
+	popl %edi
+	popl %ebp
+	addl $2, %esp
+	popw %ds
+	addl $2, %esp
+	popw %es
+	addl $2, %esp
+	popw %fs
+	
+	//return from the system call
+	iret
+	
+sys_fail:
 
 /* a bunch of short irq specific code segments that will be available for 
  * when a driver initializes an irq line (pushes the complement of the irq number)
@@ -850,9 +901,9 @@ irq_7F:
 	pushl $0xFFFFFF80
 	jmp common_irq
 
+# this one is different because it is a system call
 irq_80:
-	pushl $0xFFFFFF7F
-	jmp common_irq
+	jmp common_sys_call
 	
 irq_81:
 	pushl $0xFFFFFF7E
