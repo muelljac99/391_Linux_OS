@@ -5,6 +5,8 @@
 /* paging location info */
 #define VIDEO_START 		0x000B8000
 #define KERNEL_START 		0x00400000
+#define USER_START			0x00800000
+#define PAGE_SIZE 			0x00400000
 #define FOUR_KB_SHIFT		12
 #define VIDEO_PAGE_NUM		184					// this corresponds to the start of video memory divided by 4096 for the page size
 

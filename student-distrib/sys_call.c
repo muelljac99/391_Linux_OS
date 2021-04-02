@@ -1,10 +1,15 @@
 
 #include "types.h"
+#include "x86_desc.h"
 #include "sys_call.h"
 #include "lib.h"
 #include "rtc.h"
 #include "terminal.h"
 #include "file_dir.h"
+#include "paging.h"
+
+/* current process number */
+uint32_t process_num = 0;
 
 int32_t sys_halt(uint8_t status){
 	return -1;
@@ -12,6 +17,8 @@ int32_t sys_halt(uint8_t status){
 
 int32_t sys_execute(const uint8_t* command){
 	uint32_t command_len = strlen((int8_t*) command);
+	dentry_t exe_dentry;
+	uint32_t exe_size;
 	uint32_t word_flag = 0;
 	uint32_t word_break;
 	uint8_t exe[ARG_BUF_SIZE] = "";
@@ -30,6 +37,24 @@ int32_t sys_execute(const uint8_t* command){
 			args[i-word_break] = command[i];
 		}
 	}
+	
+	//executable check (look for the ELF magic)
+	if(exe_check(exe) != 0)
+		return -1;
+	
+	//set up the paging for the new process
+	page_dir[USER_PAGE_IDX].table_addr = ((USER_START + (process_num * PAGE_SIZE)) >> FOUR_KB_SHIFT);
+	// clear the TLB
+	tlb_flush();
+	
+	//load the program to the program image space in the page at virtual addr 128MB
+	read_dentry_by_name(exe, &exe_dentry);
+	exe_size = (*(file_sys_addr + ((1+exe_dentry.inode_num)*(INODE_SIZE/4))));
+	read_data(exe_dentry.inode_num, 0, USER_PROG_IMG, exe_size);
+	
+	//create the PCB for this process
+	//pcb.parent_esp0 = tss.esp0;
+	//pcb.parent_esp = tss.esp;
 	return -1;
 }
 
@@ -228,4 +253,22 @@ int32_t set_handler(int32_t signum, void* handler_address){
 
 int32_t sigreturn(void){
 	return -1;
+}
+
+int32_t exe_check(uint8_t* name_buf){
+	uint8_t file_start[4];			// first byte is null then next 3 should be "ELF"
+	int32_t resp;
+	
+	// check that file exists and has ELF at the start
+	resp = file_open(name_buf);
+	if(resp != 0)
+		return -1;
+	resp = file_read(0, file_start, 4);
+	if(resp != 4)
+		return -1;
+	if(strncmp(file_start + 1, "ELF", 3) != 0)
+		return -1;
+	//return 0 on success
+	file_close(0);
+	return 0;
 }

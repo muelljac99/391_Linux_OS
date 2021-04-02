@@ -167,6 +167,7 @@ typedef union pde {
 extern pde_t page_dir[PAGE_ENTRY_NUM];
 extern pte_t page_table[PAGE_ENTRY_NUM];
 extern void page_enable();
+extern void tlb_flush();
 
 /* Sets runtime-settable parameters in the GDT entry for the LDT */
 #define SET_LDT_PARAMS(str, addr, lim)                          \

@@ -63,4 +63,18 @@ void load_page(void){
 	page_dir[1].user_super = SUPER;
 	page_dir[1].read_write = ENABLE;
 	page_dir[1].present = ENABLE;
+	
+	// make a 4MB page in the directory that will point to the currently active process (index 32 because it is the 128MB region)
+	page_dir[32].table_addr = (USER_START >> FOUR_KB_SHIFT);
+	page_dir[32].available = 0;			// we are not using this
+	page_dir[32].ignored = 0;
+	page_dir[32].page_size = 1;			// this is a 4MB page
+	page_dir[32].zero_pad = 0;
+	page_dir[32].accessed = DISABLE;
+	page_dir[32].cache_dis = DISABLE;
+	page_dir[32].write_thru = DISABLE;
+	page_dir[32].user_super = USER;
+	page_dir[32].read_write = ENABLE;
+	page_dir[32].present = ENABLE;
+	
 }

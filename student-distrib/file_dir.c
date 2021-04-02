@@ -9,7 +9,7 @@
 #include "file_dir.h"
 
 // the directory entry and file position for an open file
-dentry_t file_dentry;
+dentry_t file_dentry;		// this might not let you open more than one file at once
 uint32_t file_pos = 0;
 
 // the current entry within the directory that the dir_read will gather the data for

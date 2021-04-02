@@ -169,3 +169,25 @@ page_enable:
 	
 	leave
 	ret
+
+
+tlb_flush:
+	# push ebp
+	pushl %ebp
+	movl %esp, %ebp
+	
+	# save the callee save registers and flags
+	pushfl
+	pushl %eax
+	
+	# set the cr3 with the page directory pointer
+	movl %cr3, %eax
+	movl %eax, %cr3
+	# this will flush the TLB
+	
+	# restore callee save registers and flags
+	popl %eax
+	popfl
+	
+	leave
+	ret

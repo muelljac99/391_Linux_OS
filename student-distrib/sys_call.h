@@ -4,8 +4,13 @@
 
 #include "types.h"
 
-/* number of possible files/devices we can have open */
+/* number of possible files and processes we can have open */
 #define MAX_FILE 			8
+#define MAX_PROCESS			6
+
+/* user process page info */
+#define USER_PAGE_IDX		32
+#define USER_PROG_IMG		0x08048000
 
 /* arguments buffer size */
 #define ARG_BUF_SIZE		1024
@@ -27,8 +32,15 @@ typedef struct file_array_entry {
 	uint32_t present;
 } file_array_entry_t;
 
-/* file array holding information about any open device, directory, or file */
-file_array_entry_t file_array[MAX_FILE];
+typedef struct pcb {
+	file_array_entry_t file_array[MAX_FILE];
+	uint32_t parent_process_num;
+	uint32_t parent_pcb_ptr;
+	uint32_t* parent_esp0;
+	uint32_t* parent_esp;
+
+/* array of flags indicating if a process number is available */
+uint32_t process_present[MAX_PROCESS] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 /* the subfunctions that performs the specified system call */
 int32_t sys_halt(uint8_t status);
@@ -41,5 +53,8 @@ int32_t sys_getargs(uint8_t* buf, int32_t nbytes);
 int32_t sys_vidmap(uint8_t** screen_start);
 int32_t set_handler(int32_t signum, void* handler_address);
 int32_t sigreturn(void);
+
+/* check if file is executable helper function */
+int32_t exe_check(uint8_t* name_buf);
 
 #endif /* _SYS_CALL_H */
