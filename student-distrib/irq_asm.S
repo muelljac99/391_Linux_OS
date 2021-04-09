@@ -1,7 +1,6 @@
 # irq_asm.S - holds the assembly linkage for each irq line and the common irq function that links back to the
 # 			  do_irq function.
 
-
 .text
 
 /* define all the function ptrs as global so that they can be accessed by the idt_fill function */
@@ -365,7 +364,15 @@ common_sys_call:
 	decl %eax
 	
 	// already have the arguments pushed to the stack
-	call *sys_table(0, %eax, 4)
+	call *sys_table(, %eax, 4)
+	jmp sys_done
+	
+sys_fail:
+
+	// put -1 in eax
+	movl $-1, %eax
+
+sys_done:
 	
 	//restore the registers
 	popl %ebx
@@ -383,8 +390,6 @@ common_sys_call:
 	
 	//return from the system call
 	iret
-	
-sys_fail:
 
 /* a bunch of short irq specific code segments that will be available for 
  * when a driver initializes an irq line (pushes the complement of the irq number)

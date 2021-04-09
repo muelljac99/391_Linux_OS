@@ -1,6 +1,7 @@
 
 #include "types.h"
 #include "x86_desc.h"
+#include "sys_call_asm.h"
 #include "sys_call.h"
 #include "lib.h"
 #include "rtc.h"
@@ -16,6 +17,7 @@ int32_t sys_halt(uint8_t status){
 }
 
 int32_t sys_execute(const uint8_t* command){
+	/* string editing variables */
 	uint32_t command_len = strlen((int8_t*) command);
 	dentry_t exe_dentry;
 	uint32_t exe_size;
@@ -24,6 +26,11 @@ int32_t sys_execute(const uint8_t* command){
 	uint8_t exe[ARG_BUF_SIZE] = "";
 	uint8_t args[ARG_BUF_SIZE] = "";
 	int i;
+	
+	/* process initialization variables */
+	uint32_t parent_num;
+	pcb_t* child_pcb;
+	
 	//split up by spaces to get executable word and arguments
 	for(i=0; i<command_len; i++){
 		if((command[i] == ' ')&&(word_flag == 0)){
@@ -39,8 +46,25 @@ int32_t sys_execute(const uint8_t* command){
 	}
 	
 	//executable check (look for the ELF magic)
-	if(exe_check(exe) != 0)
+	if(exe_check(exe) != 0){
 		return -1;
+	}
+	
+	//get the new process number for the child
+	parent_num = process_num;
+	for(i=0; i<MAX_PROCESS; i++){
+		if(process_present[i] == 0){
+			// this is an open process location
+			process_num = i;
+			break;
+		}
+	}
+	if(i == MAX_PROCESS){
+		// no available process spots
+		printf("NO AVAILABLE PROCESS SPOTS");
+		return -1;
+	}
+	process_num = i;
 	
 	//set up the paging for the new process
 	page_dir[USER_PAGE_IDX].table_addr = ((USER_START + (process_num * PAGE_SIZE)) >> FOUR_KB_SHIFT);
@@ -50,11 +74,39 @@ int32_t sys_execute(const uint8_t* command){
 	//load the program to the program image space in the page at virtual addr 128MB
 	read_dentry_by_name(exe, &exe_dentry);
 	exe_size = (*(file_sys_addr + ((1+exe_dentry.inode_num)*(INODE_SIZE/4))));
-	read_data(exe_dentry.inode_num, 0, USER_PROG_IMG, exe_size);
+	read_data(exe_dentry.inode_num, 0, (uint8_t*)USER_PROG_IMG, exe_size);
 	
-	//create the PCB for this process
-	//pcb.parent_esp0 = tss.esp0;
-	//pcb.parent_esp = tss.esp;
+	//fill in the child pcb items
+	child_pcb = (pcb_t*)(KERNEL_BASE-((process_num+1)*KERNEL_STACK));
+	child_pcb->parent_process_num = parent_num;
+	child_pcb->parent_pcb_ptr = (pcb_t*)(get_esp()&PCB_MASK);
+	child_pcb->parent_esp0 = get_esp();
+	child_pcb->parent_ss0 = tss.ss0;
+	
+	//set up the file array
+	for(i=0; i<MAX_FILE; i++){
+		// initialized so file array is empty
+		child_pcb->file_array[i].present = 0;
+	}
+	
+	//set the standard in and out in the file array to the terminal driver (entries 0 and 1)
+	for(i=0; i<2; i++){
+		child_pcb->file_array[i].dev_open = terminal_open;
+		child_pcb->file_array[i].dev_close = terminal_close;
+		child_pcb->file_array[i].dev_read = terminal_read;
+		child_pcb->file_array[i].dev_write = terminal_write;
+		child_pcb->file_array[i].inode = 0;				//unused
+		child_pcb->file_array[i].file_pos = 0; 			//unused
+		child_pcb->file_array[i].present = 1;
+	}
+	
+	//set up the tss with the new process info
+	tss.esp0 = KERNEL_BASE-((process_num)*KERNEL_STACK)-4;
+	tss.ss0 = KERNEL_DS;
+	
+	//context switch and IRET
+	push_context();
+	
 	return -1;
 }
 
@@ -70,16 +122,17 @@ int32_t sys_execute(const uint8_t* command){
  *   SIDE EFFECTS: may overwrite the contents of buf
  */
 int32_t sys_read(int32_t fd, void* buf, int32_t nbytes){
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	// check that the file descriptor is valid
 	if(fd < 0 || fd >= MAX_FILE){
 		return -1;
 	}
-	else if(file_array[fd].present == 0){
+	else if(curr_pcb->file_array[fd].present == 0){
 		return -1;
 	}
 	else{
 		// if it is valid then run the corresponding read function
-		return (*file_array[fd].dev_read)(fd, buf, nbytes);
+		return (*curr_pcb->file_array[fd].dev_read)(fd, buf, nbytes);
 	}
 }
 
@@ -95,16 +148,17 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes){
  *   SIDE EFFECTS: none
  */
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes){
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	// check that the file descriptor is valid
 	if(fd < 0 || fd >= MAX_FILE){
 		return -1;
 	}
-	else if(file_array[fd].present == 0){
+	else if(curr_pcb->file_array[fd].present == 0){
 		return -1;
 	}
 	else{
 		// if it is valid then run the corresponding write function
-		return (*file_array[fd].dev_write)(fd, buf, nbytes);
+		return (*curr_pcb->file_array[fd].dev_write)(fd, buf, nbytes);
 	}
 }
 
@@ -120,13 +174,14 @@ int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes){
  */
 int32_t sys_open(const uint8_t* filename){
 	int fd;
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	dentry_t dentry;
 	unsigned char rtc[RTC_NAME_LEN] = RTC_NAME;
 	unsigned char term[TERMINAL_NAME_LEN] = TERMINAL_NAME;
 	
 	//find a spot in the file array
 	for(fd = 0; fd < MAX_FILE; fd++){
-		if(file_array[fd].present == 0){
+		if(curr_pcb->file_array[fd].present == 0){
 			break;
 		}
 	}
@@ -138,30 +193,30 @@ int32_t sys_open(const uint8_t* filename){
 	// set up the file array entry with the info for the device/file
 	if(strncmp(filename, rtc, RTC_NAME_LEN) == 0){
 		// set up the entry for the rtc
-		file_array[fd].dev_open = rtc_open;
-		file_array[fd].dev_close = rtc_close;
-		file_array[fd].dev_read = rtc_read;
-		file_array[fd].dev_write = rtc_write;
-		file_array[fd].inode = 0; 				//unused
-		file_array[fd].file_pos = 0;			//unused
-		file_array[fd].present = 1;				
+		curr_pcb->file_array[fd].dev_open = rtc_open;
+		curr_pcb->file_array[fd].dev_close = rtc_close;
+		curr_pcb->file_array[fd].dev_read = rtc_read;
+		curr_pcb->file_array[fd].dev_write = rtc_write;
+		curr_pcb->file_array[fd].inode = 0; 				//unused
+		curr_pcb->file_array[fd].file_pos = 0;			//unused
+		curr_pcb->file_array[fd].present = 1;				
 		
 		//run rtc open now
-		(*file_array[fd].dev_open)(filename);
+		(*curr_pcb->file_array[fd].dev_open)(filename);
 	}
 	
 	else if(strncmp(filename, term, TERMINAL_NAME_LEN) == 0){
 		// set up the entry for the terminal
-		file_array[fd].dev_open = terminal_open;
-		file_array[fd].dev_close = terminal_close;
-		file_array[fd].dev_read = terminal_read;
-		file_array[fd].dev_write = terminal_write;
-		file_array[fd].inode = 0;				//unused
-		file_array[fd].file_pos = 0; 			//unused
-		file_array[fd].present = 1;
+		curr_pcb->file_array[fd].dev_open = terminal_open;
+		curr_pcb->file_array[fd].dev_close = terminal_close;
+		curr_pcb->file_array[fd].dev_read = terminal_read;
+		curr_pcb->file_array[fd].dev_write = terminal_write;
+		curr_pcb->file_array[fd].inode = 0;				//unused
+		curr_pcb->file_array[fd].file_pos = 0; 			//unused
+		curr_pcb->file_array[fd].present = 1;
 		
 		// run terminal open now
-		(*file_array[fd].dev_open)(filename);
+		(*curr_pcb->file_array[fd].dev_open)(filename);
 	}
 	
 	else{
@@ -171,29 +226,29 @@ int32_t sys_open(const uint8_t* filename){
 		}
 		if(dentry.file_type == 1){
 			//this is a directory
-			file_array[fd].dev_open = dir_open;
-			file_array[fd].dev_close = dir_close;
-			file_array[fd].dev_read = dir_read;
-			file_array[fd].dev_write = dir_write;
-			file_array[fd].inode = 0;				//unused
-			file_array[fd].file_pos = 0; 			//unused
-			file_array[fd].present = 1;
+			curr_pcb->file_array[fd].dev_open = dir_open;
+			curr_pcb->file_array[fd].dev_close = dir_close;
+			curr_pcb->file_array[fd].dev_read = dir_read;
+			curr_pcb->file_array[fd].dev_write = dir_write;
+			curr_pcb->file_array[fd].inode = 0;				//unused
+			curr_pcb->file_array[fd].file_pos = 0; 			//unused
+			curr_pcb->file_array[fd].present = 1;
 			
 			// run directory open now
-			(*file_array[fd].dev_open)(filename);
+			(*curr_pcb->file_array[fd].dev_open)(filename);
 		}
 		else if(dentry.file_type == 2){
 			//this is a normal file
-			file_array[fd].dev_open = file_open;
-			file_array[fd].dev_close = file_close;
-			file_array[fd].dev_read = file_read;
-			file_array[fd].dev_write = file_write;
-			file_array[fd].inode = dentry.inode_num;
-			file_array[fd].file_pos = 0;			//starts at 0
-			file_array[fd].present = 1;
+			curr_pcb->file_array[fd].dev_open = file_open;
+			curr_pcb->file_array[fd].dev_close = file_close;
+			curr_pcb->file_array[fd].dev_read = file_read;
+			curr_pcb->file_array[fd].dev_write = file_write;
+			curr_pcb->file_array[fd].inode = dentry.inode_num;
+			curr_pcb->file_array[fd].file_pos = 0;			//starts at 0
+			curr_pcb->file_array[fd].present = 1;
 			
 			// run file open now
-			(*file_array[fd].dev_open)(filename);
+			(*curr_pcb->file_array[fd].dev_open)(filename);
 		}
 		else{
 			//invalid file type
@@ -213,26 +268,27 @@ int32_t sys_open(const uint8_t* filename){
  *   SIDE EFFECTS: may edit file array
  */
 int32_t sys_close(int32_t fd){
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	uint32_t ret_val;
 	// check that the file descriptor is valid
 	if(fd < 0 || fd >= MAX_FILE){
 		return -1;
 	}
-	else if(file_array[fd].present == 0){
+	else if(curr_pcb->file_array[fd].present == 0){
 		return -1;
 	}
 	else{
 		// if it is valid then run the specific close function
-		ret_val = (*file_array[fd].dev_close)(fd);
+		ret_val = (*curr_pcb->file_array[fd].dev_close)(fd);
 		
 		// empty the entry in the array
-		file_array[fd].dev_open = NULL;
-		file_array[fd].dev_close = NULL;
-		file_array[fd].dev_read = NULL;
-		file_array[fd].dev_write = NULL;
-		file_array[fd].inode = 0;				//unused
-		file_array[fd].file_pos = 0; 			//unused
-		file_array[fd].present = 0;
+		curr_pcb->file_array[fd].dev_open = NULL;
+		curr_pcb->file_array[fd].dev_close = NULL;
+		curr_pcb->file_array[fd].dev_read = NULL;
+		curr_pcb->file_array[fd].dev_write = NULL;
+		curr_pcb->file_array[fd].inode = 0;				//unused
+		curr_pcb->file_array[fd].file_pos = 0; 			//unused
+		curr_pcb->file_array[fd].present = 0;
 		
 		//return with the value from the specific function
 		return ret_val;
@@ -247,11 +303,11 @@ int32_t sys_vidmap(uint8_t** screen_start){
 	return -1;
 }
 
-int32_t set_handler(int32_t signum, void* handler_address){
+int32_t sys_sethandler(int32_t signum, void* handler_address){
 	return -1;
 }
 
-int32_t sigreturn(void){
+int32_t sys_sigreturn(void){
 	return -1;
 }
 
@@ -266,7 +322,7 @@ int32_t exe_check(uint8_t* name_buf){
 	resp = file_read(0, file_start, 4);
 	if(resp != 4)
 		return -1;
-	if(strncmp(file_start + 1, "ELF", 3) != 0)
+	if(strncmp(file_start + 1, (uint8_t*)"ELF", 3) != 0)
 		return -1;
 	//return 0 on success
 	file_close(0);

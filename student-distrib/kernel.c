@@ -167,6 +167,12 @@ void entry(unsigned long magic, unsigned long addr) {
 	//enable paging
 	page_enable();
 	
+	//initialize the process present info to all 0s
+	int i;
+	for(i=0; i<MAX_PROCESS; i++){
+		process_present[i] = 0;
+	}
+	
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
 
@@ -182,9 +188,10 @@ void entry(unsigned long magic, unsigned long addr) {
 
 #ifdef RUN_TESTS
     /* Run tests */
-    launch_tests();
+    //launch_tests();
 #endif
     /* Execute the first program ("shell") ... */
+	sys_execute((uint8_t*)"testprint");
 
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile (".1: hlt; jmp .1;");

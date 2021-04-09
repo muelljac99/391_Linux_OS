@@ -339,11 +339,11 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length
 		block_ptr += (offset%DATA_BLOCK_SIZE);
 		
 		//determine the first barrier
-		if((length < (data_len-offset)) && (length < (DATA_BLOCK_SIZE-(offset%DATA_BLOCK_SIZE)))){
+		if((length <= (data_len-offset)) && (length <= (DATA_BLOCK_SIZE-(offset%DATA_BLOCK_SIZE)))){
 			//requested read length is first barrier
 			section_length = length;
 		}
-		else if(((data_len-offset) < length)&&((data_len-offset) < (DATA_BLOCK_SIZE-(offset%DATA_BLOCK_SIZE)))){
+		else if(((data_len-offset) <= length)&&((data_len-offset) <= (DATA_BLOCK_SIZE-(offset%DATA_BLOCK_SIZE)))){
 			//end of file is the first barrier
 			section_length = data_len - offset;
 		}
