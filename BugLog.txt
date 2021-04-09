@@ -44,3 +44,4 @@ Solved: When reading data from large files we would switch between data blocks a
 	Page Fault when copying executable data Bug #10; Found - 4/9/2021;
 Copy executable data from the file to the program memory page causes a Page Fault.
 Our conditational statements were not accounting for edge cases correctly and caused the read_data function to write too far into memory, thus creating a page fault.
+------------------------------------------- END OF CHECKPOINT 3 --------------------------------------------------------
