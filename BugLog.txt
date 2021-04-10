@@ -47,5 +47,5 @@ Our conditational statements were not accounting for edge cases correctly and ca
 
 	Page Fault when Context Switching Bug #11; Found - 4/10/2021;
 When executing the IRET instruction during the context switch part of the execute function our system page faults.
-
+We are not very intelligent and were testing the execute function with testprint instead of shell, started right up.
 ------------------------------------------- END OF CHECKPOINT 3 --------------------------------------------------------
