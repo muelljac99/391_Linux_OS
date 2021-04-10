@@ -7,7 +7,7 @@
 
 .text
 
-.global tlb_flush, get_esp, push_context
+.global tlb_flush, get_esp, push_context, halt_jump
 
 tlb_flush:
 	# push ebp
@@ -42,10 +42,6 @@ get_esp:
 	ret
 	
 push_context:
-	# push ebp
-	pushl %ebp
-	movl %esp, %ebp
-	
 	#push user ds
 	pushl $USER_DS
 	#push ESP (user stack at 132MB)
@@ -56,16 +52,29 @@ push_context:
 	pushfl
 	#push user cs
 	pushl $USER_CS
-	#push EIP (start of program image)
-	pushl $USER_PROG_IMG
+	#push EIP (start of program image) -> the argument of the function
+	movl 20(%esp), %eax
+	pushl %eax
 	
 	#context filled in so now IRET
 	iret
 
 execute_return:
+	# remove the user ds value from the stack
+	addl $4, %esp
 	#normal leave
-	leave
 	ret
 	
+halt_jump:
+	# push ebp
+	pushl %ebp
+	movl %esp, %ebp
 	
+	# put the return value into EBX
+	movl 8(%ebp), %eax
 	
+	# restore the parent stack pointer
+	movl 12(%ebp), %esp
+	
+	# jump to the execute return
+	jmp execute_return

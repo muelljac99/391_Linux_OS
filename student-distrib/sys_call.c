@@ -13,7 +13,41 @@
 uint32_t process_num = 0;
 
 int32_t sys_halt(uint8_t status){
-	return -1;
+	int i;
+	
+	//dont halt if this is the base shell process
+	if(process_num == 0){
+		return (int32_t)status;
+	}
+	
+	//get the current pcb pointer
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
+	
+	//restore the parent tss info
+	tss.esp0 = curr_pcb->parent_esp0;
+	tss.ss0 = curr_pcb->parent_ss0;
+	
+	//restore the parent paging info
+	page_dir[USER_PAGE_IDX].table_addr = ((USER_START + (curr_pcb->parent_process_num * PAGE_SIZE)) >> FOUR_KB_SHIFT);
+	// clear the TLB
+	tlb_flush();
+	
+	//close all the open files and devices
+	for(i=0; i<MAX_FILE; i++){
+		if(curr_pcb->file_array[i].present == 1){
+			sys_close(i);
+		}
+	}
+	
+	//set process to available and change process number
+	process_present[process_num] = 0;
+	process_num = curr_pcb->parent_process_num;
+	
+	//jump to the execute return
+	halt_jump((uint32_t)status, (uint32_t)curr_pcb->parent_esp0);
+	
+	// if we get here then something went wrong
+	return (int32_t)status;
 }
 
 int32_t sys_execute(const uint8_t* command){
@@ -30,6 +64,9 @@ int32_t sys_execute(const uint8_t* command){
 	/* process initialization variables */
 	uint32_t parent_num;
 	pcb_t* child_pcb;
+	uint8_t start_inst[4];
+	uint32_t start_addr = 0;
+	uint32_t status;
 	
 	//split up by spaces to get executable word and arguments
 	for(i=0; i<command_len; i++){
@@ -64,6 +101,7 @@ int32_t sys_execute(const uint8_t* command){
 		printf("NO AVAILABLE PROCESS SPOTS");
 		return -1;
 	}
+	process_present[i] = 1;
 	process_num = i;
 	
 	//set up the paging for the new process
@@ -75,6 +113,13 @@ int32_t sys_execute(const uint8_t* command){
 	read_dentry_by_name(exe, &exe_dentry);
 	exe_size = (*(file_sys_addr + ((1+exe_dentry.inode_num)*(INODE_SIZE/4))));
 	read_data(exe_dentry.inode_num, 0, (uint8_t*)USER_PROG_IMG, exe_size);
+	
+	//get the starting instruction
+	read_data(exe_dentry.inode_num, 24, start_inst, 4);
+	for(i=3; i>=0; i--){
+		start_addr = start_addr << 8;
+		start_addr += (uint32_t)start_inst[i];
+	}
 	
 	//fill in the child pcb items
 	child_pcb = (pcb_t*)(KERNEL_BASE-((process_num+1)*KERNEL_STACK));
@@ -104,10 +149,10 @@ int32_t sys_execute(const uint8_t* command){
 	tss.esp0 = KERNEL_BASE-((process_num)*KERNEL_STACK)-4;
 	tss.ss0 = KERNEL_DS;
 	
-	//context switch and IRET
-	push_context();
+	//context switch and IRET (after halt we come back here)
+	status = push_context(start_addr);
 	
-	return -1;
+	return (int32_t)status;
 }
 
 /* 

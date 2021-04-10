@@ -131,6 +131,7 @@ int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
 	uint8_t* read_buf = (uint8_t*)buf;
 	dentry_t dir_entry;
 	uint32_t num_dir;
+	uint32_t read_size;
 	int i;
 	
 	//check for valid buffer ptr
@@ -162,10 +163,18 @@ int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
 		info[70] = '0';
 	}
 	
-	//put the info into the output buffer
-	memcpy(read_buf, info, 80);
+	//get the size of the read
+	if(nbytes < 80){
+		read_size = nbytes;
+	}
+	else{
+		read_size = 80;
+	}
 	
-	return 0;
+	//put the info into the output buffer
+	memcpy(read_buf, info, read_size);
+	
+	return read_size;
 }
 
 /* 
