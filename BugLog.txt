@@ -48,4 +48,8 @@ Our conditational statements were not accounting for edge cases correctly and ca
 	Page Fault when Context Switching Bug #11; Found - 4/10/2021;
 When executing the IRET instruction during the context switch part of the execute function our system page faults.
 We are not very intelligent and were testing the execute function with testprint instead of shell, started right up.
+
+	Page Fault when returning from execute Bug #12; Found - 4/11/2021;
+We are able to enter the shell program, but after calling testprint everything works as expected until we decide to halt. As soon as we return from execute, we encounter a page fault.
+We were not saving the ebp value from before the context switch. So when returning from sys_execute it was resetting ebp to what is was in sys_halt and thus the ebp was higher than the esp, which was incorrect. So we saved the ebp before the context switch and restored it before returning from sys_execute.
 ------------------------------------------- END OF CHECKPOINT 3 --------------------------------------------------------
