@@ -35,7 +35,8 @@ int32_t __sys_halt(uint32_t status){
 	}
 	
 	//restore the parent tss info
-	tss.esp0 = curr_pcb->parent_esp0;
+	//the tss esp0 must point to start not current otherwise stack will build up
+	tss.esp0 = KERNEL_BASE-((curr_pcb->parent_process_num)*KERNEL_STACK)-4;
 	tss.ss0 = curr_pcb->parent_ss0;
 	
 	//restore the parent paging info
