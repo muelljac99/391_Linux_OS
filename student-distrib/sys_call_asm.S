@@ -42,6 +42,8 @@ get_esp:
 	ret
 	
 push_context:
+	# save the ebp for the system execute function
+	pushl %ebp
 	#push user ds
 	pushl $USER_DS
 	#push ESP (user stack at 132MB)
@@ -53,28 +55,24 @@ push_context:
 	#push user cs
 	pushl $USER_CS
 	#push EIP (start of program image) -> the argument of the function
-	movl 20(%esp), %eax
+	movl 24(%esp), %eax
 	pushl %eax
 	
 	#context filled in so now IRET
 	iret
 
 execute_return:
-	# remove the user ds value from the stack
-	addl $4, %esp
-	#normal leave
+	# restore the ebp to the execute base pointer
+	popl %ebp
+	
 	ret
 	
 halt_jump:
-	# push ebp
-	pushl %ebp
-	movl %esp, %ebp
-	
 	# put the return value into EBX
-	movl 8(%ebp), %eax
+	movl 4(%esp), %eax
 	
 	# restore the parent stack pointer
-	movl 12(%ebp), %esp
+	movl 8(%esp), %esp
 	
 	# jump to the execute return
 	jmp execute_return

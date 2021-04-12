@@ -17,6 +17,7 @@ int32_t sys_halt(uint8_t status){
 	
 	//dont halt if this is the base shell process
 	if(process_num == 0){
+		printf("CANNOT HALT SHELL");
 		return (int32_t)status;
 	}
 	
