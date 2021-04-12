@@ -27,7 +27,9 @@ uint32_t dir_index;
 int32_t file_open(const uint8_t* filename){
 	//int8_t* filename_copy = filename;
 	
-	read_dentry_by_name(filename, &file_dentry);
+	if (-1 == read_dentry_by_name(filename, &file_dentry)) {
+		return -1;
+	}
 	//check that the requested is a file
 	if(file_dentry.file_type != TYPE_FILE){
 		return -1;

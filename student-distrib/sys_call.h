@@ -26,6 +26,9 @@
 #define TERMINAL_NAME		"terminal"
 #define TERMINAL_NAME_LEN 	9
 
+/* sys_execute contant for an orphan process */
+#define ORPHAN 				256
+
 #ifndef ASM
 
 /* the entry to the file array filled on a "open" system call */
@@ -61,6 +64,9 @@ int32_t sys_getargs(uint8_t* buf, int32_t nbytes);
 int32_t sys_vidmap(uint8_t** screen_start);
 int32_t sys_sethandler(int32_t signum, void* handler_address);
 int32_t sys_sigreturn(void);
+
+/* Halt wrapper function */
+int32_t __sys_halt(uint32_t status);
 
 /* check if file is executable helper function */
 int32_t exe_check(uint8_t* name_buf);

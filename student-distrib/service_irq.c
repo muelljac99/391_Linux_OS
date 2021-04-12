@@ -9,6 +9,8 @@
 #include "rtc.h"
 #include "terminal.h"
 
+#define EXCEPTION_STATUS			256
+
 const char exception_resp[NUM_EXCEPTION][32] = {"Division by Zero", "Single-step Interrupt", "Non-Maskablee Interrupt",
 												"Breakpoint", "Overflow", "Bounds", "Invalid Opcode", "Coprocessor N/A",
 												"Double Fault", "Coprocessor Seg Over", "Invalid Task State Seg", "Segment Not Present",
@@ -48,9 +50,10 @@ int32_t do_irq(pt_regs_t* reg){
 	// check the type of irq
 	if(irq < BASE_INT){
 		// this is an exception
-		clear();
+		//clear();
 		printf("EXCEPTION #%x: %s\n", irq, exception_resp[irq]);
-		while(1);
+		__sys_halt(EXCEPTION_STATUS);
+		//while(1);
 	}
 	else if(irq == SYS_CALL_IRQ){
 		// shouldn't get to the common_irq from int 0x80 so this is an error

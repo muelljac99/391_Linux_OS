@@ -12,17 +12,27 @@
 /* current process number */
 uint32_t process_num = 0;
 
-int32_t sys_halt(uint8_t status){
+int32_t sys_halt(uint8_t status) {
+	return __sys_halt((uint32_t)status);
+}
+
+int32_t __sys_halt(uint32_t status){
 	int i;
 	
 	//dont halt if this is the base shell process
-	if(process_num == 0){
+	/*if(process_num == 0){
 		printf("CANNOT HALT SHELL");
 		return (int32_t)status;
-	}
+	}*/
+	
 	
 	//get the current pcb pointer
 	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
+	
+	if (curr_pcb->parent_process_num == ORPHAN) {
+		process_present[0] = 0;
+		sys_execute((uint8_t*)"shell");
+	}
 	
 	//restore the parent tss info
 	tss.esp0 = curr_pcb->parent_esp0;
@@ -94,16 +104,18 @@ int32_t sys_execute(const uint8_t* command){
 		if(process_present[i] == 0){
 			// this is an open process location
 			process_num = i;
+			if (process_num == 0) {
+				parent_num = ORPHAN;
+			}
 			break;
 		}
 	}
 	if(i == MAX_PROCESS){
 		// no available process spots
-		printf("NO AVAILABLE PROCESS SPOTS");
+		printf("NO AVAILABLE PROCESS SPOTS\n");
 		return -1;
 	}
 	process_present[i] = 1;
-	process_num = i;
 	
 	//set up the paging for the new process
 	page_dir[USER_PAGE_IDX].table_addr = ((USER_START + (process_num * PAGE_SIZE)) >> FOUR_KB_SHIFT);
@@ -342,7 +354,7 @@ int32_t sys_close(int32_t fd){
 }
 
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes){
-	return -1;
+	return 0;
 }
 
 int32_t sys_vidmap(uint8_t** screen_start){
