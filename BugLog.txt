@@ -52,4 +52,9 @@ We are not very intelligent and were testing the execute function with testprint
 	Page Fault when returning from execute Bug #12; Found - 4/11/2021;
 We are able to enter the shell program, but after calling testprint everything works as expected until we decide to halt. As soon as we return from execute, we encounter a page fault.
 We were not saving the ebp value from before the context switch. So when returning from sys_execute it was resetting ebp to what is was in sys_halt and thus the ebp was higher than the esp, which was incorrect. So we saved the ebp before the context switch and restored it before returning from sys_execute.
+
+	Page Fault when returning from execute Bug #13; Found - 4/12/2021;
+Running several instances of a user program from the shell causes the OS to run into an infinite loop of page fault exceptions.
+In the halt function, the esp0 value of TSS was being set to the parent_esp0, which was an inceremented (current) stack pointer, causing the stack to buildup with user program calls. Fixed by changing the esp0 value of TSSto the base address  of the kernel stack instead.
+
 ------------------------------------------- END OF CHECKPOINT 3 --------------------------------------------------------
