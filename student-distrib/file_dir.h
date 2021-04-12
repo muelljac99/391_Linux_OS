@@ -13,6 +13,10 @@
 #define TYPE_FILE			2
 #define TYPE_DIR			1
 
+/* directory read output constants */
+#edfine FILENAME_POS 		11
+#define DIR_READ_BUF_SIZE   80
+
 /* file system address global */
 uint32_t* file_sys_addr;
 

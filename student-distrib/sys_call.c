@@ -12,30 +12,44 @@
 /* current process number */
 uint32_t process_num = 0;
 
+/* 
+ * sys_halt
+ *   DESCRIPTION: This is the system call wrapper function for system halt. It is used to allow
+ * 				  for a 8-bit status argument from the system
+ *   INPUTS: status -- information about how the user process terminated
+ *   OUTPUTS: none
+ *   RETURN VALUE: returns the status value to the parent process
+ *   SIDE EFFECTS: changes current process to the parent
+ */
 int32_t sys_halt(uint8_t status) {
 	return __sys_halt((uint32_t)status);
 }
 
+/* 
+ * __sys_halt
+ *   DESCRIPTION: This is the base system halt function. This function allows for larger than 32-bit
+ *				  inputs for exception handling. This function is called when one user process
+ * 				  ends and the parent process should resume
+ *   INPUTS: status -- information about how the user process terminated
+ *   OUTPUTS: none
+ *   RETURN VALUE: returns the status value to the parent process
+ *   SIDE EFFECTS: changes current process to the parent
+ */
 int32_t __sys_halt(uint32_t status){
 	int i;
-	
-	//dont halt if this is the base shell process
-	/*if(process_num == 0){
-		printf("CANNOT HALT SHELL");
-		return (int32_t)status;
-	}*/
-	
 	
 	//get the current pcb pointer
 	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	
 	if (curr_pcb->parent_process_num == ORPHAN) {
+		// if attempting to close the base shell, start a new one at the same process number
 		process_present[0] = 0;
 		sys_execute((uint8_t*)"shell");
 	}
 	
 	//restore the parent tss info
 	//the tss esp0 must point to start not current otherwise stack will build up
+	//subtract 4 from the base to remain in the page
 	tss.esp0 = KERNEL_BASE-((curr_pcb->parent_process_num)*KERNEL_STACK)-4;
 	tss.ss0 = curr_pcb->parent_ss0;
 	
@@ -62,6 +76,15 @@ int32_t __sys_halt(uint32_t status){
 	return (int32_t)status;
 }
 
+/* 
+ * sys_execute
+ *   DESCRIPTION: This is the execute system call. It creates a new process for a specified
+ *				  executable function and gives the new process control of the system.
+ *   INPUTS: command -- a string containing the executable name and any arguments for that executable
+ *   OUTPUTS: none
+ *   RETURN VALUE: the status of the new process's termination (received from halt)
+ *   SIDE EFFECTS: changes current process to the child
+ */
 int32_t sys_execute(const uint8_t* command){
 	/* string editing variables */
 	uint32_t command_len = strlen((int8_t*) command);
@@ -76,7 +99,7 @@ int32_t sys_execute(const uint8_t* command){
 	/* process initialization variables */
 	uint32_t parent_num;
 	pcb_t* child_pcb;
-	uint8_t start_inst[4];
+	uint8_t start_inst[4];		//starting address is 4bytes long
 	uint32_t start_addr = 0;
 	uint32_t status;
 	
@@ -125,12 +148,13 @@ int32_t sys_execute(const uint8_t* command){
 	
 	//load the program to the program image space in the page at virtual addr 128MB
 	read_dentry_by_name(exe, &exe_dentry);
-	exe_size = (*(file_sys_addr + ((1+exe_dentry.inode_num)*(INODE_SIZE/4))));
+	exe_size = (*(file_sys_addr + ((1+exe_dentry.inode_num)*(INODE_SIZE/4))));		//divide by 4 to get # of uint's
 	read_data(exe_dentry.inode_num, 0, (uint8_t*)USER_PROG_IMG, exe_size);
 	
 	//get the starting instruction
-	read_data(exe_dentry.inode_num, 24, start_inst, 4);
+	read_data(exe_dentry.inode_num, EXE_EIP_OFFSET, start_inst, 4); 		//reads the 4-byte address
 	for(i=3; i>=0; i--){
+		//combine the four 8-bit values into one 32-bit
 		start_addr = start_addr << 8;
 		start_addr += (uint32_t)start_inst[i];
 	}
@@ -160,6 +184,7 @@ int32_t sys_execute(const uint8_t* command){
 	}
 	
 	//set up the tss with the new process info
+	//subtract 4 from the base to remain in the page
 	tss.esp0 = KERNEL_BASE-((process_num)*KERNEL_STACK)-4;
 	tss.ss0 = KERNEL_DS;
 	
@@ -170,7 +195,7 @@ int32_t sys_execute(const uint8_t* command){
 }
 
 /* 
- * __sys_read__
+ * sys_read
  *   DESCRIPTION: This is the common C function for all read system calls. This function performs a
  * 				  specific read function if a valid file array entry is specified
  *   INPUTS: fd -- the file descriptor or index to the file array of the device to be read
@@ -196,7 +221,7 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes){
 }
 
 /* 
- * __sys_write__
+ * sys_write
  *   DESCRIPTION: This is the common C function for all write system calls. This function performs a
  * 				  specific write function if a valid file array entry is specified
  *   INPUTS: fd -- the file descriptor or index to the file array of the device to be written
@@ -222,7 +247,7 @@ int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes){
 }
 
 /* 
- * __sys_open__
+ * sys_open
  *   DESCRIPTION: This is the common C function for all open system calls. It fills the first available
  * 				  file array entry with the info for a given file, device, or directory then performs
  * 				  specific open function.
@@ -283,7 +308,7 @@ int32_t sys_open(const uint8_t* filename){
 			//no matching file
 			return -1;
 		}
-		if(dentry.file_type == 1){
+		if(dentry.file_type == TYPE_DIR){
 			//this is a directory
 			curr_pcb->file_array[fd].dev_open = dir_open;
 			curr_pcb->file_array[fd].dev_close = dir_close;
@@ -296,7 +321,7 @@ int32_t sys_open(const uint8_t* filename){
 			// run directory open now
 			(*curr_pcb->file_array[fd].dev_open)(filename);
 		}
-		else if(dentry.file_type == 2){
+		else if(dentry.file_type == TYPE_FILE){
 			//this is a normal file
 			curr_pcb->file_array[fd].dev_open = file_open;
 			curr_pcb->file_array[fd].dev_close = file_close;
@@ -318,7 +343,7 @@ int32_t sys_open(const uint8_t* filename){
 }
 
 /* 
- * __sys_close__
+ * sys_close
  *   DESCRIPTION: This is the common C function for all close system calls. This function performs
  * 				  the device specific close then empties the specified file array entry.
  *   INPUTS: fd -- the file descriptor or index to the file array of the device to be closed
@@ -354,22 +379,63 @@ int32_t sys_close(int32_t fd){
 	}
 }
 
+/* 
+ * sys_getargs
+ *   DESCRIPTION: Not Yet Implemented
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: none
+ */
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes){
+	// returns 0 currently to allow for the sigtest squashing
 	return 0;
 }
 
+/* 
+ * sys_vidmap
+ *   DESCRIPTION: Not Yet Implemented
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: none
+ */
 int32_t sys_vidmap(uint8_t** screen_start){
 	return -1;
 }
 
+/* 
+ * sys_sethandler
+ *   DESCRIPTION: Not Yet Implemented
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: none
+ */
 int32_t sys_sethandler(int32_t signum, void* handler_address){
 	return -1;
 }
 
+/* 
+ * sys_sigreturn
+ *   DESCRIPTION: Not Yet Implemented
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: none
+ */
 int32_t sys_sigreturn(void){
 	return -1;
 }
 
+/* 
+ * exe_check
+ *   DESCRIPTION: The helper function used to check whether a given string is a file and an executable
+ *   INPUTS: name_buf -- the buffer containing the filename to be checked
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on failure
+ *   SIDE EFFECTS: opens a file and clobbers file_dentry global
+ */
 int32_t exe_check(uint8_t* name_buf){
 	uint8_t file_start[4];			// first byte is null then next 3 should be "ELF"
 	int32_t resp;
@@ -378,10 +444,10 @@ int32_t exe_check(uint8_t* name_buf){
 	resp = file_open(name_buf);
 	if(resp != 0)
 		return -1;
-	resp = file_read(0, file_start, 4);
+	resp = file_read(0, file_start, 4);		//checking for null byte then ELF so 4 bytes
 	if(resp != 4)
 		return -1;
-	if(strncmp(file_start + 1, (uint8_t*)"ELF", 3) != 0)
+	if(strncmp(file_start + 1, (uint8_t*)"ELF", 3) != 0) 		//ignore the null byte
 		return -1;
 	//return 0 on success
 	file_close(0);

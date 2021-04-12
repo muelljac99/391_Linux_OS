@@ -129,7 +129,7 @@ int32_t dir_close(int32_t fd){
  *   SIDE EFFECTS: always writes 80 characters into the buffer
  */
 int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
-	uint8_t info[80] = "file_name:                                  |file_type:   |file_size:       \n";
+	uint8_t info[DIR_READ_BUF_SIZE] = "file_name:                                  |file_type:   |file_size:       \n";
 	uint8_t* read_buf = (uint8_t*)buf;
 	dentry_t dir_entry;
 	uint32_t num_dir;
@@ -149,9 +149,9 @@ int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
 	dir_index++;
 	
 	//fill the filename into the info buffer
-	for(i=11; i<11+NAME_LEN; i++){
+	for(i=FILENAME_POS; i<FILENAME_POS+NAME_LEN; i++){
 		// the filename begins at the 11th character in the output buffer
-		info[i] = dir_entry.filename[i-11];
+		info[i] = dir_entry.filename[i-FILENAME_POS];
 	}
 	//fill the file type into the buffer (placed at the 56th character in the output buffer)
 	info[56] = dir_entry.file_type + '0';
@@ -166,11 +166,11 @@ int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
 	}
 	
 	//get the size of the read
-	if(nbytes < 80){
+	if(nbytes < DIR_READ_BUF_SIZE){
 		read_size = nbytes;
 	}
 	else{
-		read_size = 80;
+		read_size = DIR_READ_BUF_SIZE;
 	}
 	
 	//put the info into the output buffer

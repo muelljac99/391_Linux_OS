@@ -29,6 +29,9 @@
 /* sys_execute contant for an orphan process */
 #define ORPHAN 				256
 
+/* executable starting eip location */
+#define EXE_EIP_OFFSET		24
+
 #ifndef ASM
 
 /* the entry to the file array filled on a "open" system call */
