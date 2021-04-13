@@ -248,13 +248,14 @@ int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry){
 	
 	//find entry with same name
 	for(i=0; i<num_dir; i++){
-		if(strncmp(filename, curr->filename, comp_len) == 0){
+		if(strncmp(filename, curr->filename, comp_len) == 0 && strncmp(filename, curr->filename, strlen(curr->filename)) == 0){
 			break;
 		}
 		else{
 			curr++;
 		}
 	}
+	
 	//check if found a match
 	if(i == num_dir){
 		printf("NO FILE MATCH FOUND\n");
