@@ -58,3 +58,8 @@ Running several instances of a user program from the shell causes the OS to run 
 Solved: In the halt function, the esp0 value of TSS was being set to the parent_esp0, which was an inceremented (current) stack pointer, causing the stack to buildup with user program calls. Fixed by changing the esp0 value of TSSto the base address  of the kernel stack instead.
 
 ------------------------------------------- END OF CHECKPOINT 3 --------------------------------------------------------
+
+	Execute works for mistyped programs Bug #14; Found - 4/12/2021;
+	Shell will execute mistyped programs as long as the letters match the start of a program. Ex. (shel -> shell or testprin -> testprint).
+Solved: Added another check in the read_dentry_by_name function using the provided string compare function with the length of the filename, NOT the length of the typed program name.
+------------------------------------------- END OF CHECKPOINT 4 --------------------------------------------------------
