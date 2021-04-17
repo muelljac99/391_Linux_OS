@@ -129,7 +129,8 @@ int32_t dir_close(int32_t fd){
  *   SIDE EFFECTS: always writes 80 characters into the buffer
  */
 int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
-	uint8_t info[DIR_READ_BUF_SIZE] = "file_name:                                  |file_type:   |file_size:       \n";
+	//uint8_t info[DIR_READ_BUF_SIZE] = "file_name:                                  |file_type:   |file_size:       \n";
+	uint8_t info[DIR_READ_BUF_SIZE] = "";
 	uint8_t* read_buf = (uint8_t*)buf;
 	dentry_t dir_entry;
 	uint32_t num_dir;
@@ -149,10 +150,13 @@ int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
 	dir_index++;
 	
 	//fill the filename into the info buffer
-	for(i=FILENAME_POS; i<FILENAME_POS+NAME_LEN; i++){
+	for(i=0; i<NAME_LEN; i++){
 		// the filename begins at the 11th character in the output buffer
-		info[i] = dir_entry.filename[i-FILENAME_POS];
+		info[i] = dir_entry.filename[i];
 	}
+	
+	/* this is all for the advanced directory read format
+	
 	//fill the file type into the buffer (placed at the 56th character in the output buffer)
 	info[56] = dir_entry.file_type + '0';
 	//fill the file size into the buffer
@@ -164,6 +168,8 @@ int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
 		// if not a file type then there is no size of the file
 		info[70] = '0';
 	}
+	
+	*/
 	
 	//get the size of the read
 	if(nbytes < DIR_READ_BUF_SIZE){
@@ -214,8 +220,7 @@ int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry){
 		return -1;
 	}
 	
-	
-	//get the minimum of the filename length and the max 32 bytes
+	//get the minimum of the filename length and the max 64 bytes
 	if(strlen((int8_t*)fname) < 2*NAME_LEN){
 		comp_len = strlen((int8_t*)fname);
 	}
@@ -248,7 +253,8 @@ int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry){
 	
 	//find entry with same name
 	for(i=0; i<num_dir; i++){
-		if(strncmp(filename, curr->filename, comp_len) == 0 && strncmp(filename, curr->filename, strlen(curr->filename)) == 0){
+		if(strncmp(filename, curr->filename, comp_len) == 0 && 
+				strncmp(filename, curr->filename, NAME_LEN) == 0){
 			break;
 		}
 		else{
@@ -339,7 +345,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length
 	//get the length of the data of our file and check the offset is less than this length
 	data_len = (*inode_ptr);
 	if(offset >= data_len){
-		return -1;
+		return 0;
 	}
 	
 	while(1){

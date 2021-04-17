@@ -12,6 +12,9 @@
 /* current process number */
 uint32_t process_num = 0;
 
+/* number of shells currently running across all terminals */
+uint32_t shell_count = 0;
+
 /* 
  * sys_halt
  *   DESCRIPTION: This is the system call wrapper function for system halt. It is used to allow
@@ -41,10 +44,15 @@ int32_t __sys_halt(uint32_t status){
 	//get the current pcb pointer
 	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	
+	//if the process is a shell then we must decrement the shell counter
+	if(strncmp(curr_pcb->exe_name, (uint8_t*)SHELL_NAME, SHELL_NAME_LEN) == 0){
+		shell_count--;
+	}
+	
 	if (curr_pcb->parent_process_num == ORPHAN) {
 		// if attempting to close the base shell, start a new one at the same process number
 		process_present[0] = 0;
-		sys_execute((uint8_t*)"shell");
+		sys_execute((uint8_t*)SHELL_NAME);
 	}
 	
 	//restore the parent tss info
@@ -64,6 +72,10 @@ int32_t __sys_halt(uint32_t status){
 			sys_close(i);
 		}
 	}
+	
+	//clear the executable and argument buffers
+	strncpy((int8_t*)curr_pcb->exe_name, (int8_t*)"", NAME_LEN);
+	strncpy((int8_t*)curr_pcb->arg_buf, (int8_t*)"", ARG_BUF_SIZE);
 	
 	//set process to available and change process number
 	process_present[process_num] = 0;
@@ -116,10 +128,23 @@ int32_t sys_execute(const uint8_t* command){
 			args[i-word_break] = command[i];
 		}
 	}
+	args[i] = NULL;
 	
 	//executable check (look for the ELF magic)
 	if(exe_check(exe) != 0){
 		return -1;
+	}
+	
+	
+	//prevent more than 3 shells from running
+	if(strncmp(exe, (uint8_t*)SHELL_NAME, SHELL_NAME_LEN) == 0){
+		if(shell_count >= 3){
+			printf("CANNOT RUN ADDITIONAL SHELL\n");
+			return -1;
+		}
+		else{
+			shell_count++;
+		}
 	}
 	
 	//get the new process number for the child
@@ -159,8 +184,14 @@ int32_t sys_execute(const uint8_t* command){
 		start_addr += (uint32_t)start_inst[i];
 	}
 	
-	//fill in the child pcb items
+	//get the pcb ptr for the child process
 	child_pcb = (pcb_t*)(KERNEL_BASE-((process_num+1)*KERNEL_STACK));
+	
+	//fill the process exe name and arguments buffer
+	strncpy((int8_t*)child_pcb->exe_name, (int8_t*)exe, NAME_LEN);
+	strncpy((int8_t*)child_pcb->arg_buf, (int8_t*)args, ARG_BUF_SIZE);
+	
+	//fill the parent process info of the child pcb
 	child_pcb->parent_process_num = parent_num;
 	child_pcb->parent_pcb_ptr = (pcb_t*)(get_esp()&PCB_MASK);
 	child_pcb->parent_esp0 = get_esp();
@@ -202,13 +233,13 @@ int32_t sys_execute(const uint8_t* command){
  * 			 buf -- a buffer of unknown type that may be filled by the read function
  * 			 nbytes -- the number of bytes to be read and filled into the buf
  *   OUTPUTS: none
- *   RETURN VALUE: 0 on success, -1 on failure
+ *   RETURN VALUE: return value of specific read function on success, -1 on failure
  *   SIDE EFFECTS: may overwrite the contents of buf
  */
 int32_t sys_read(int32_t fd, void* buf, int32_t nbytes){
 	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
-	// check that the file descriptor is valid
-	if(fd < 0 || fd >= MAX_FILE){
+	// check that the file descriptor is valid (can't read from stdout)
+	if(fd < 0 || fd >= MAX_FILE || fd == 1){
 		return -1;
 	}
 	else if(curr_pcb->file_array[fd].present == 0){
@@ -233,8 +264,8 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes){
  */
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes){
 	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
-	// check that the file descriptor is valid
-	if(fd < 0 || fd >= MAX_FILE){
+	// check that the file descriptor is valid (can't write to stdin)
+	if(fd < 0 || fd >= MAX_FILE || fd == 0){
 		return -1;
 	}
 	else if(curr_pcb->file_array[fd].present == 0){
@@ -270,7 +301,7 @@ int32_t sys_open(const uint8_t* filename){
 		}
 	}
 	if(fd == MAX_FILE){
-		printf("NO AVAILABLE FILE ARRAY ENTRY");
+		printf("NO AVAILABLE FILE ARRAY ENTRY\n");
 		return -1;
 	}
 	
@@ -354,8 +385,8 @@ int32_t sys_open(const uint8_t* filename){
 int32_t sys_close(int32_t fd){
 	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	uint32_t ret_val;
-	// check that the file descriptor is valid
-	if(fd < 0 || fd >= MAX_FILE){
+	// check that the file descriptor is valid (can't close the stdin and stdout)
+	if(fd < 2 || fd >= MAX_FILE){
 		return -1;
 	}
 	else if(curr_pcb->file_array[fd].present == 0){
@@ -381,14 +412,26 @@ int32_t sys_close(int32_t fd){
 
 /* 
  * sys_getargs
- *   DESCRIPTION: Not Yet Implemented
- *   INPUTS: none
+ *   DESCRIPTION: This is the common C function for all getargs system calls. This function fills
+ *				  a passed in buffer with the command line arguments provided when the user program was called
+ *   INPUTS: buf -- the buffer to be filled with the arguments
+ *			 nbytes -- the number of bytes to copy from the arguments into the buffer
  *   OUTPUTS: none
- *   RETURN VALUE: none
- *   SIDE EFFECTS: none
+ *   RETURN VALUE: 0 on success, -1 on fail
+ *   SIDE EFFECTS: overwrites the passed buffer
  */
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes){
-	// returns 0 currently to allow for the sigtest squashing
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
+	//check for null buffer
+	if(buf == NULL){
+		return -1;
+	}
+	//check that the argument string length fits in the passed buffer
+	if(strlen((int8_t*)curr_pcb->arg_buf) > nbytes){
+		return -1;
+	}
+	//fill the passed buffer with the arguments
+	strncpy((int8_t*)buf, (int8_t*)curr_pcb->arg_buf, nbytes);
 	return 0;
 }
 

@@ -288,9 +288,14 @@ irq_handle:
 sys_table:
 	.long sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_sethandler, sys_sigreturn
 
-/* This is the default assembly linkage that each small irq-specific code jumps to.
- * The code will save the registers and pass a pointer to the registers and irq number
- * structure then call the default c irq handler
+/* 
+ * common_irq
+ *   DESCRIPTION: The assembly linkage function that saves the user register status and performs an interrupt or exception
+ *				  through the do_irq function
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: pushes all registers
  */
 common_irq:
 	// save all the registers (use push a instead
@@ -338,7 +343,18 @@ ret_from_irq:
 	//leave
 	iret
 	
-// common assembly linkage function for the system calls
+/* 
+ * common_sys_call
+ *   DESCRIPTION: The assembly linkage function for a system call that saves all registers then performs the corresponding
+ *				  system call according to the passes system call number
+ *   INPUTS: eax -- system call number
+ *			 ebx -- argument #1
+ *			 ecx -- argument #2
+ *			 edx -- argument #3
+ *   OUTPUTS: none
+ *   RETURN VALUE: return value varies according to desired system call
+ *   SIDE EFFECTS: call your doctor if you have an erection lasting more than four hours
+ */
 common_sys_call:
 	// save all the registers (no save for eax - holds return value)
 	pushw %fs

@@ -7,8 +7,17 @@
 
 .text
 
+# globals for the function names to be used elsewhere
 .global tlb_flush, get_esp, push_context, halt_jump
 
+/* 
+ * tlb_flush
+ *   DESCRIPTION: An assemby helper function that clears the tlb by rewriting the cr3 with page directory pointer
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: flushes tlb
+ */
 tlb_flush:
 	# push ebp
 	pushl %ebp
@@ -29,7 +38,15 @@ tlb_flush:
 	
 	leave
 	ret
-	
+
+/* 
+ * get_esp
+ *   DESCRIPTION: An assemby helper function that returns the current stack pointer
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: esp value
+ *   SIDE EFFECTS: none
+ */
 get_esp:
 	# push ebp
 	pushl %ebp
@@ -40,7 +57,16 @@ get_esp:
 	
 	leave
 	ret
-	
+
+/* 
+ * push context
+ *   DESCRIPTION: An assemby helper function that pushes the user context for an iret call. This function also
+ *				  receives a jump from halt system calls to conclude execute system calls
+ *   INPUTS: start -- the starting eip for a user space program
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: switches context and clobbers eax
+ */
 push_context:
 	# save the ebp for the system execute function
 	pushl %ebp
@@ -66,7 +92,17 @@ execute_return:
 	popl %ebp
 	
 	ret
-	
+
+/* 
+ * halt_jump
+ *   DESCRIPTION: An assemby helper function that returns control to the parent process and parent kernel stack and
+ *				  jumps back to the execute system call to return to the parent user program 
+ *   INPUTS: ret_val -- the status value for a halt system call that is returned by execute
+ *			 parent_stack_ptr -- ptr to the parent kernel stack to be restored
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: switches process and stack and jumps to execute_return
+ */
 halt_jump:
 	# put the return value into EBX
 	movl 4(%esp), %eax

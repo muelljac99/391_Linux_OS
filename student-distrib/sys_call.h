@@ -18,13 +18,16 @@
 #define USER_PROG_IMG		0x08048000
 
 /* arguments buffer size */
-#define ARG_BUF_SIZE		1024
+#define ARG_BUF_SIZE		128
+#define NAME_LEN			32
 
 /* strings used for specific devices */
 #define RTC_NAME 			"rtc"
 #define RTC_NAME_LEN 		4
 #define TERMINAL_NAME		"terminal"
 #define TERMINAL_NAME_LEN 	9
+#define SHELL_NAME			"shell"
+#define SHELL_NAME_LEN		5
 
 /* sys_execute contant for an orphan process */
 #define ORPHAN 				256
@@ -47,6 +50,8 @@ typedef struct file_array_entry {
 
 typedef struct pcb {
 	file_array_entry_t file_array[MAX_FILE];
+	uint8_t exe_name[NAME_LEN];
+	uint8_t arg_buf[ARG_BUF_SIZE];
 	uint32_t parent_process_num;
 	struct pcb* parent_pcb_ptr;
 	uint32_t parent_esp0;
