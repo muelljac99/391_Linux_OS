@@ -62,4 +62,14 @@ Solved: In the halt function, the esp0 value of TSS was being set to the parent_
 	Execute works for mistyped programs Bug #14; Found - 4/12/2021;
 	Shell will execute mistyped programs as long as the letters match the start of a program. Ex. (shel -> shell or testprin -> testprint).
 Solved: Added another check in the read_dentry_by_name function using the provided string compare function with the length of the filename, NOT the length of the typed program name.
+
+	Cat program printed "file read failed" after writing data to screen Bug #15; Found - 4/17/2021;
+The program prints the correct data of the file to the screen, but reports that it failed the file read, and the program terminated abnormally.
+Solved: The read data function returned -1 after reaching the end of data, changed to 0 to indicate success.
+
+	Programs passed with arguments only work once Bug #16; Found - 4/17/2021;
+After running a program with an argument (e.g. cat frame0.txt), the program will not work if called a second time.
+Solved: The argument data was being written into the argument buffer correctly, but extrenuous data from the read function also was written in, causing the file name to be incorrect. We had to make sure that only the length of the file name was written into the buffer.
+
+
 ------------------------------------------- END OF CHECKPOINT 4 --------------------------------------------------------
