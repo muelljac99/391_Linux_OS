@@ -191,6 +191,7 @@ void entry(unsigned long magic, unsigned long addr) {
     //launch_tests();
 #endif
     /* Execute the first program ("shell") ... */
+	clear();
 	sys_execute((uint8_t*)"shell");
 	
 	printf("SHOULD NEVER REACH THIS");

@@ -55,6 +55,18 @@ int32_t __sys_halt(uint32_t status){
 		sys_execute((uint8_t*)SHELL_NAME);
 	}
 	
+	//if this user process used a vidmap then destroy it
+	if(curr_pcb->vidmap_flag == 1){
+		if(user_table[USER_VID_PAGE_IDX].present == 1){
+			user_table[USER_VID_PAGE_IDX].present = 0;
+			user_table[USER_VID_PAGE_IDX].page_addr = NULL;
+		}
+		if(page_dir[USER_VID_DIR_IDX].present == 1){
+			page_dir[USER_VID_DIR_IDX].present = 0;
+			page_dir[USER_VID_DIR_IDX].table_addr = NULL;
+		}
+	}
+	
 	//restore the parent tss info
 	//the tss esp0 must point to start not current otherwise stack will build up
 	//subtract 4 from the base to remain in the page
@@ -197,6 +209,9 @@ int32_t sys_execute(const uint8_t* command){
 	child_pcb->parent_esp0 = get_esp();
 	child_pcb->parent_ss0 = tss.ss0;
 	
+	//set the vidmap flag
+	child_pcb->vidmap_flag = 0;
+	
 	//set up the file array
 	for(i=0; i<MAX_FILE; i++){
 		// initialized so file array is empty
@@ -317,7 +332,9 @@ int32_t sys_open(const uint8_t* filename){
 		curr_pcb->file_array[fd].present = 1;				
 		
 		//run rtc open now
-		(*curr_pcb->file_array[fd].dev_open)(filename);
+		if((*curr_pcb->file_array[fd].dev_open)(filename) == -1){
+			return -1;
+		}
 	}
 	
 	else if(strncmp(filename, term, TERMINAL_NAME_LEN) == 0){
@@ -331,7 +348,9 @@ int32_t sys_open(const uint8_t* filename){
 		curr_pcb->file_array[fd].present = 1;
 		
 		// run terminal open now
-		(*curr_pcb->file_array[fd].dev_open)(filename);
+		if((*curr_pcb->file_array[fd].dev_open)(filename) == -1){
+			return -1;
+		}
 	}
 	
 	else{
@@ -346,11 +365,13 @@ int32_t sys_open(const uint8_t* filename){
 			curr_pcb->file_array[fd].dev_read = dir_read;
 			curr_pcb->file_array[fd].dev_write = dir_write;
 			curr_pcb->file_array[fd].inode = 0;				//unused
-			curr_pcb->file_array[fd].file_pos = 0; 			//unused
+			curr_pcb->file_array[fd].file_pos = 0; 			//becomes directory index
 			curr_pcb->file_array[fd].present = 1;
 			
 			// run directory open now
-			(*curr_pcb->file_array[fd].dev_open)(filename);
+			if((*curr_pcb->file_array[fd].dev_open)(filename) == -1){
+				return -1;
+			}
 		}
 		else if(dentry.file_type == TYPE_FILE){
 			//this is a normal file
@@ -363,7 +384,9 @@ int32_t sys_open(const uint8_t* filename){
 			curr_pcb->file_array[fd].present = 1;
 			
 			// run file open now
-			(*curr_pcb->file_array[fd].dev_open)(filename);
+			if((*curr_pcb->file_array[fd].dev_open)(filename) == -1){
+				return -1;
+			}
 		}
 		else{
 			//invalid file type
@@ -437,14 +460,51 @@ int32_t sys_getargs(uint8_t* buf, int32_t nbytes){
 
 /* 
  * sys_vidmap
- *   DESCRIPTION: Not Yet Implemented
- *   INPUTS: none
+ *   DESCRIPTION: This is the common system call used by a user space function to create a user accessible
+ *				  map to the video memory.
+ *   INPUTS: screen_start -- a pointer to the pointer to the user space video memory
  *   OUTPUTS: none
- *   RETURN VALUE: none
- *   SIDE EFFECTS: none
+ *   RETURN VALUE: 0 on success, -1 on fail
+ *   SIDE EFFECTS: changes the page directory
  */
 int32_t sys_vidmap(uint8_t** screen_start){
-	return -1;
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
+	//check that the ptr to the ptr is not null
+	if(screen_start < (uint8_t**)USER_VIRT_START || screen_start >= (uint8_t**)USER_VIRT_END){
+		return -1;
+	}
+	//set up the page table for the user space video memory
+	page_dir[USER_VID_DIR_IDX].table_addr = (((unsigned int)user_table) >> FOUR_KB_SHIFT);
+	page_dir[USER_VID_DIR_IDX].available = 0;			// we are not using these bits
+	page_dir[USER_VID_DIR_IDX].ignored = 0;
+	page_dir[USER_VID_DIR_IDX].page_size = 0;			// 0 because this corresponds to a page table
+	page_dir[USER_VID_DIR_IDX].zero_pad = 0;
+	page_dir[USER_VID_DIR_IDX].accessed = DISABLE;
+	page_dir[USER_VID_DIR_IDX].cache_dis = DISABLE;
+	page_dir[USER_VID_DIR_IDX].write_thru = DISABLE;
+	page_dir[USER_VID_DIR_IDX].user_super = USER;
+	page_dir[USER_VID_DIR_IDX].read_write = ENABLE;
+	page_dir[USER_VID_DIR_IDX].present = ENABLE;
+	
+	//set up the page for the user space video memory (4kB page)
+	user_table[USER_VID_PAGE_IDX].page_addr = (VIDEO_START >> FOUR_KB_SHIFT);
+	user_table[USER_VID_PAGE_IDX].available = 0;		//we are not using these bits
+	user_table[USER_VID_PAGE_IDX].global = ENABLE;
+	user_table[USER_VID_PAGE_IDX].zero_pad = 0;
+	user_table[USER_VID_PAGE_IDX].dirty = DISABLE;
+	user_table[USER_VID_PAGE_IDX].accessed = DISABLE;
+	user_table[USER_VID_PAGE_IDX].cache_dis = DISABLE;
+	user_table[USER_VID_PAGE_IDX].write_thru = DISABLE;
+	user_table[USER_VID_PAGE_IDX].user_super = USER;
+	user_table[USER_VID_PAGE_IDX].read_write = ENABLE;
+	user_table[USER_VID_PAGE_IDX].present = ENABLE;
+	
+	//adjust argument to point to user space video memory
+	(*screen_start) = (uint8_t*)USER_VID_START;
+	
+	//set the vidmap flag
+	curr_pcb->vidmap_flag = 1;
+	return 0;
 }
 
 /* 
@@ -481,18 +541,18 @@ int32_t sys_sigreturn(void){
  */
 int32_t exe_check(uint8_t* name_buf){
 	uint8_t file_start[4];			// first byte is null then next 3 should be "ELF"
+	dentry_t exe_dentry;
 	int32_t resp;
 	
 	// check that file exists and has ELF at the start
-	resp = file_open(name_buf);
+	resp = read_dentry_by_name(name_buf, &exe_dentry);
 	if(resp != 0)
 		return -1;
-	resp = file_read(0, file_start, 4);		//checking for null byte then ELF so 4 bytes
+	resp = read_data(exe_dentry.inode_num, 0, file_start, 4);		//checking for null byte then ELF so 4 bytes
 	if(resp != 4)
 		return -1;
 	if(strncmp(file_start + 1, (uint8_t*)"ELF", 3) != 0) 		//ignore the null byte
 		return -1;
 	//return 0 on success
-	file_close(0);
 	return 0;
 }

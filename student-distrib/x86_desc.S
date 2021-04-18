@@ -11,7 +11,7 @@
 .globl tss, tss_desc_ptr, ldt, ldt_desc_ptr
 .globl gdt_ptr
 .globl idt_desc_ptr, idt
-.globl page_dir, page_table
+.globl page_dir, page_table, user_table
 .globl page_enable
 
 .align 4
@@ -130,6 +130,15 @@ _page_table:
 	.long 0
 	.endr
 page_table_bottom:
+
+#allocating the space for a user page table
+	.align 4096
+user_table:
+_user_table:
+	.rept PAGE_ENTRY_NUM
+	.long 0
+	.endr
+user_table_bottom:
 
 /* 
  * page_enable

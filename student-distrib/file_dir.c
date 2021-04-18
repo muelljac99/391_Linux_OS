@@ -6,35 +6,20 @@
 #include "irq_asm.h"
 #include "service_irq.h"
 #include "sys_call.h"
+#include "sys_call_asm.h"
 #include "file_dir.h"
-
-// the directory entry and file position for an open file
-dentry_t file_dentry;		// this might not let you open more than one file at once
-uint32_t file_pos = 0;
-
-// the current entry within the directory that the dir_read will gather the data for
-uint32_t dir_index;
 
 /* 
  * file_open
- *   DESCRIPTION: The file driver open function that finds a directory entry by the name of the file and
- * 				  saves the directory entry structure for that file
+ *   DESCRIPTION: The file driver open function that no longer has functionality as all of its requirements
+ *				  are accomplished with the open system call
  *   INPUTS: filename -- the name of the file to be found
  *   OUTPUTS: none
  *   RETURN VALUE: 0 on success, -1 on fail
- *   SIDE EFFECTS: sets the read location to start at the beginning of the file
+ *   SIDE EFFECTS: none
  */
 int32_t file_open(const uint8_t* filename){
-	//int8_t* filename_copy = filename;
-	
-	if (-1 == read_dentry_by_name(filename, &file_dentry)) {
-		return -1;
-	}
-	//check that the requested is a file
-	if(file_dentry.file_type != TYPE_FILE){
-		return -1;
-	}
-	file_pos = 0;
+	// all of this has already been accomplished in sys_open
 	return 0;
 }
 
@@ -47,7 +32,8 @@ int32_t file_open(const uint8_t* filename){
  *   SIDE EFFECTS: none
  */
 int32_t file_close(int32_t fd){
-	file_pos = 0;
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
+	curr_pcb->file_array[fd].file_pos = 0;
 	return 0;
 }
 
@@ -62,18 +48,19 @@ int32_t file_close(int32_t fd){
  *   SIDE EFFECTS: sets the read location to where this read has left off in the file
  */
 int32_t file_read(int32_t fd, void* buf, int32_t nbytes){
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	uint8_t* read_buf = (uint8_t*)buf;
 	uint32_t read_len;
-	//check that the file has already been opened and is correct type
-	if(file_dentry.file_type != TYPE_FILE){
+	//check that the file has already been opened and is correct type by checking the inode
+	if(curr_pcb->file_array[fd].inode == 0){
 		return -1;
 	}
 	//check that buffer is valid
 	if(read_buf == NULL){
 		return -1;
 	}
-	read_len = read_data(file_dentry.inode_num, file_pos, read_buf, nbytes);
-	file_pos += read_len;
+	read_len = read_data(curr_pcb->file_array[fd].inode, curr_pcb->file_array[fd].file_pos, read_buf, nbytes);
+	curr_pcb->file_array[fd].file_pos += read_len;
 	return read_len;
 }
 
@@ -94,14 +81,14 @@ int32_t file_write(int32_t fd, const void* buf, int32_t nbytes){
 
 /* 
  * dir_open
- *   DESCRIPTION: The directory driver open function that initializes the directory index from which to read to 0
+ *   DESCRIPTION: The directory driver open function that does nothing
  *   INPUTS: filename -- unused
  *   OUTPUTS: none
  *   RETURN VALUE: 0 on success, -1 on fail
  *   SIDE EFFECTS: none
  */
 int32_t dir_open(const uint8_t* filename){
-	dir_index = 0;
+	//accomplished in system open
 	return 0;
 }
 
@@ -114,7 +101,8 @@ int32_t dir_open(const uint8_t* filename){
  *   SIDE EFFECTS: none
  */
 int32_t dir_close(int32_t fd){
-	dir_index = 0;
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
+	curr_pcb->file_array[fd].file_pos = 0;				//file position corresponds to directory index
 	return 0;
 }
 
@@ -129,6 +117,7 @@ int32_t dir_close(int32_t fd){
  *   SIDE EFFECTS: always writes 80 characters into the buffer
  */
 int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	//uint8_t info[DIR_READ_BUF_SIZE] = "file_name:                                  |file_type:   |file_size:       \n";
 	uint8_t info[DIR_READ_BUF_SIZE] = "";
 	uint8_t* read_buf = (uint8_t*)buf;
@@ -143,11 +132,11 @@ int32_t dir_read(int32_t fd, void* buf, int32_t nbytes){
 	}
 	
 	num_dir = (*file_sys_addr);
-	if(dir_index >= num_dir){
+	if(curr_pcb->file_array[fd].file_pos >= num_dir){
 		return 0;
 	}
-	read_dentry_by_index(dir_index, &dir_entry);
-	dir_index++;
+	read_dentry_by_index(curr_pcb->file_array[fd].file_pos, &dir_entry);
+	curr_pcb->file_array[fd].file_pos++;
 	
 	//fill the filename into the info buffer
 	for(i=0; i<NAME_LEN; i++){

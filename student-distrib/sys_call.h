@@ -16,6 +16,8 @@
 /* user process page info */
 #define USER_PAGE_IDX		32
 #define USER_PROG_IMG		0x08048000
+#define USER_VIRT_START		0x08000000
+#define USER_VIRT_END		0x08400000
 
 /* arguments buffer size */
 #define ARG_BUF_SIZE		128
@@ -35,6 +37,11 @@
 /* executable starting eip location */
 #define EXE_EIP_OFFSET		24
 
+/* user space video memory page info */
+#define USER_VID_DIR_IDX	33
+#define USER_VID_PAGE_IDX	184
+#define USER_VID_START		0x084B8000
+
 #ifndef ASM
 
 /* the entry to the file array filled on a "open" system call */
@@ -48,6 +55,7 @@ typedef struct file_array_entry {
 	uint32_t present;
 } file_array_entry_t;
 
+/* the structure for the process information (process control block) */
 typedef struct pcb {
 	file_array_entry_t file_array[MAX_FILE];
 	uint8_t exe_name[NAME_LEN];
@@ -56,6 +64,7 @@ typedef struct pcb {
 	struct pcb* parent_pcb_ptr;
 	uint32_t parent_esp0;
 	uint16_t parent_ss0;
+	uint32_t vidmap_flag;
 } pcb_t;
 
 /* array of flags indicating if a process number is available */
