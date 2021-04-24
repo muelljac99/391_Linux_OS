@@ -80,3 +80,5 @@ Solved: Since the fish program opens 2 files, our implementation of the file sys
 	Programs with arguments execute when there are no arguments Bug #18; Found - 4/18/2021;
 Executing grep or cat with no arguments works when it should not. It attempts to run without arguments which causes some problems.
 Solved: In the getargs system call we added a check to see if the argument buffer is empty, and return -1 if so.
+
+------------------------------------------- END OF CHECKPOINT 5 --------------------------------------------------------
