@@ -8,7 +8,7 @@
 .text
 
 # globals for the function names to be used elsewhere
-.global tlb_flush, get_esp, push_context, halt_jump
+.global tlb_flush, get_esp, get_ebp, push_context, halt_jump
 
 /* 
  * tlb_flush
@@ -56,6 +56,20 @@ get_esp:
 	movl %esp, %eax
 	
 	leave
+	ret
+
+/* 
+ * get_ebp
+ *   DESCRIPTION: An assemby helper function that returns the current stack base pointer
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: ebp value
+ *   SIDE EFFECTS: none
+ */
+get_ebp:
+	# put the base pointer into the return spot
+	movl %ebp, %eax
+
 	ret
 
 /* 

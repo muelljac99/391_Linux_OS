@@ -52,6 +52,45 @@ void load_page(void){
 	page_table[VIDEO_PAGE_NUM].read_write = ENABLE;
 	page_table[VIDEO_PAGE_NUM].present = ENABLE;
 	
+	// make a 4kB page for the terminal 1 video memory save
+	page_table[VIDEO_PAGE_NUM+1].page_addr = (TERM1_VID >> FOUR_KB_SHIFT);
+	page_table[VIDEO_PAGE_NUM+1].available = 0;		//we are not using these bits
+	page_table[VIDEO_PAGE_NUM+1].global = ENABLE;
+	page_table[VIDEO_PAGE_NUM+1].zero_pad = 0;
+	page_table[VIDEO_PAGE_NUM+1].dirty = DISABLE;
+	page_table[VIDEO_PAGE_NUM+1].accessed = DISABLE;
+	page_table[VIDEO_PAGE_NUM+1].cache_dis = DISABLE;
+	page_table[VIDEO_PAGE_NUM+1].write_thru = DISABLE;
+	page_table[VIDEO_PAGE_NUM+1].user_super = SUPER;
+	page_table[VIDEO_PAGE_NUM+1].read_write = ENABLE;
+	page_table[VIDEO_PAGE_NUM+1].present = ENABLE;
+	
+	// make a 4kB page for the terminal 2 video memory save
+	page_table[VIDEO_PAGE_NUM+2].page_addr = (TERM2_VID >> FOUR_KB_SHIFT);
+	page_table[VIDEO_PAGE_NUM+2].available = 0;		//we are not using these bits
+	page_table[VIDEO_PAGE_NUM+2].global = ENABLE;
+	page_table[VIDEO_PAGE_NUM+2].zero_pad = 0;
+	page_table[VIDEO_PAGE_NUM+2].dirty = DISABLE;
+	page_table[VIDEO_PAGE_NUM+2].accessed = DISABLE;
+	page_table[VIDEO_PAGE_NUM+2].cache_dis = DISABLE;
+	page_table[VIDEO_PAGE_NUM+2].write_thru = DISABLE;
+	page_table[VIDEO_PAGE_NUM+2].user_super = SUPER;
+	page_table[VIDEO_PAGE_NUM+2].read_write = ENABLE;
+	page_table[VIDEO_PAGE_NUM+2].present = ENABLE;
+	
+	// make a 4kB page for the terminal 3 video memory save
+	page_table[VIDEO_PAGE_NUM+3].page_addr = (TERM3_VID >> FOUR_KB_SHIFT);
+	page_table[VIDEO_PAGE_NUM+3].available = 0;		//we are not using these bits
+	page_table[VIDEO_PAGE_NUM+3].global = ENABLE;
+	page_table[VIDEO_PAGE_NUM+3].zero_pad = 0;
+	page_table[VIDEO_PAGE_NUM+3].dirty = DISABLE;
+	page_table[VIDEO_PAGE_NUM+3].accessed = DISABLE;
+	page_table[VIDEO_PAGE_NUM+3].cache_dis = DISABLE;
+	page_table[VIDEO_PAGE_NUM+3].write_thru = DISABLE;
+	page_table[VIDEO_PAGE_NUM+3].user_super = SUPER;
+	page_table[VIDEO_PAGE_NUM+3].read_write = ENABLE;
+	page_table[VIDEO_PAGE_NUM+3].present = ENABLE;
+	
 	// make a 4MB page in the page directory for the kernel (directory index 1 because it is the 4MB to 8MB region)
 	page_dir[1].table_addr = (KERNEL_START >> FOUR_KB_SHIFT);
 	page_dir[1].available = 0;			// we are not using these bits

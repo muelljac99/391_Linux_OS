@@ -12,9 +12,6 @@
 /* current process number */
 uint32_t process_num = 0;
 
-/* number of shells currently running across all terminals */
-uint32_t shell_count = 0;
-
 /* 
  * sys_halt
  *   DESCRIPTION: This is the system call wrapper function for system halt. It is used to allow
@@ -44,14 +41,9 @@ int32_t __sys_halt(uint32_t status){
 	//get the current pcb pointer
 	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	
-	//if the process is a shell then we must decrement the shell counter
-	if(strncmp(curr_pcb->exe_name, (uint8_t*)SHELL_NAME, SHELL_NAME_LEN) == 0){
-		shell_count--;
-	}
-	
 	if (curr_pcb->parent_process_num == ORPHAN) {
 		// if attempting to close the base shell, start a new one at the same process number
-		process_present[0] = 0;
+		process_present[term_save[curr_term].user_process_num] = 0;
 		sys_execute((uint8_t*)SHELL_NAME);
 	}
 	
@@ -93,6 +85,9 @@ int32_t __sys_halt(uint32_t status){
 	process_present[process_num] = 0;
 	process_num = curr_pcb->parent_process_num;
 	
+	//set the terminal process number to the parent
+	term_save[curr_term].user_process_num = process_num;
+	
 	//jump to the execute return
 	halt_jump((uint32_t)status, (uint32_t)curr_pcb->parent_esp0);
 	
@@ -102,14 +97,27 @@ int32_t __sys_halt(uint32_t status){
 
 /* 
  * sys_execute
- *   DESCRIPTION: This is the execute system call. It creates a new process for a specified
- *				  executable function and gives the new process control of the system.
+ *   DESCRIPTION: This is the execute system call. It is a wrapper for the kernel specific system execute function
  *   INPUTS: command -- a string containing the executable name and any arguments for that executable
  *   OUTPUTS: none
  *   RETURN VALUE: the status of the new process's termination (received from halt)
  *   SIDE EFFECTS: changes current process to the child
  */
 int32_t sys_execute(const uint8_t* command){
+	return __sys_execute(command, 0);
+}
+
+/* 
+ * __sys_execute
+ *   DESCRIPTION: This is the kernel specific execute system call. It creates a new process for a specified
+ *				  executable function and gives the new process control of the system.
+ *   INPUTS: command -- a string containing the executable name and any arguments for that executable
+ *			 orphan -- 1 if the process should be an orphan or is a base process
+ *   OUTPUTS: none
+ *   RETURN VALUE: the status of the new process's termination (received from halt)
+ *   SIDE EFFECTS: changes current process to the child
+ */
+int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
 	/* string editing variables */
 	uint32_t command_len = strlen((int8_t*) command);
 	dentry_t exe_dentry;
@@ -147,7 +155,7 @@ int32_t sys_execute(const uint8_t* command){
 		return -1;
 	}
 	
-	
+	/*
 	//prevent more than 3 shells from running
 	if(strncmp(exe, (uint8_t*)SHELL_NAME, SHELL_NAME_LEN) == 0){
 		if(shell_count >= 3){
@@ -158,6 +166,7 @@ int32_t sys_execute(const uint8_t* command){
 			shell_count++;
 		}
 	}
+	*/
 	
 	//get the new process number for the child
 	parent_num = process_num;
@@ -165,7 +174,7 @@ int32_t sys_execute(const uint8_t* command){
 		if(process_present[i] == 0){
 			// this is an open process location
 			process_num = i;
-			if (process_num == 0) {
+			if (orphan == 1) {
 				parent_num = ORPHAN;
 			}
 			break;
@@ -177,6 +186,9 @@ int32_t sys_execute(const uint8_t* command){
 		return -1;
 	}
 	process_present[i] = 1;
+	
+	//set the terminal process number to the child
+	term_save[curr_term].user_process_num = process_num;
 	
 	//set up the paging for the new process
 	page_dir[USER_PAGE_IDX].table_addr = ((USER_START + (process_num * PAGE_SIZE)) >> FOUR_KB_SHIFT);
@@ -447,6 +459,10 @@ int32_t sys_getargs(uint8_t* buf, int32_t nbytes){
 	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	//check for null buffer
 	if(buf == NULL){
+		return -1;
+	}
+	//check if the args buffer is empty
+	if(strlen((int8_t*)curr_pcb->arg_buf) == 0){
 		return -1;
 	}
 	//check that the argument string length fits in the passed buffer

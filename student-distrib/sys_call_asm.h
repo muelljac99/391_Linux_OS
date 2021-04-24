@@ -15,6 +15,9 @@ extern void tlb_flush();
 /* helper assembly function to get the esp ptr */
 extern uint32_t get_esp();
 
+/* helper assembly function to get the ebp ptr */
+extern uint32_t get_ebp();
+
 /* helper assembly function to push the user info for an iret */
 extern uint32_t push_context(uint32_t start);
 

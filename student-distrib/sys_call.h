@@ -85,6 +85,9 @@ int32_t sys_sigreturn(void);
 /* Halt wrapper function */
 int32_t __sys_halt(uint32_t status);
 
+/* Execute wrapper function */
+int32_t __sys_execute(const uint8_t* command, uint32_t orphan);
+
 /* check if file is executable helper function */
 int32_t exe_check(uint8_t* name_buf);
 

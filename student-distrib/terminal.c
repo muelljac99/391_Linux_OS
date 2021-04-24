@@ -6,11 +6,7 @@
 #include "service_irq.h"
 #include "sys_call.h"
 #include "terminal.h"
-
-/* terminal driver buffer and flags */
-volatile unsigned char key_buf[BUF_SIZE_MAX] = "";
-volatile int key_buf_size = 0;
-volatile int terminal_flag = 0;
+#include "paging.h"
 
 /* keyboard global flags */
 int rshift = 0;
@@ -82,11 +78,11 @@ void handle_keyboard(void){
 		// enter will set the terminal flag indicating a read is done
 		putc('\n');
 		buf_fill('\n');
-		terminal_flag = 0;
+		term_save[curr_term].terminal_flag = 0;
 	}
 	else if(scan == BACKSPACE){
 		//don't backspace if keyboard buffer is empty
-		if(key_buf_size == 0){
+		if(term_save[curr_term].key_buf_size == 0){
 			return;
 		}
 		// move the screen location back one
@@ -111,14 +107,26 @@ void handle_keyboard(void){
 		// move cursor back one
 		update_cursor(get_x(), get_y());
 		// remove element from the terminal buffer
-		if(key_buf_size != 0){
-			key_buf_size--;
+		if(term_save[curr_term].key_buf_size != 0){
+			term_save[curr_term].key_buf_size--;
 		}
 		//get and set functions for the video memory locations (screen_x and screen_y)
 		//move back a space and putc a ' '
 	}
-	else if(scan == F1){
-		// do nothing
+	else if(scan == F1 && alt == 1){
+		if(curr_term != 0){
+			switch_terminals(0);
+		}
+	}
+	else if(scan == F2 && alt == 1){
+		if(curr_term != 1){
+			switch_terminals(1);
+		}
+	}
+	else if(scan == F3 && alt == 1){
+		if(curr_term != 2){
+			switch_terminals(2);
+		}
 	}
 	else if(scan < 0x40 && scancode[scan] != 0){
 		if((ctrl == 1)&&(scancode[scan] == 'l')){
@@ -161,6 +169,14 @@ void init_keyboard(void){
 	idt[KEYBOARD_IRQ].present = 1;
 	irq_handlers[KEYBOARD_IRQ - BASE_INT] = handle_keyboard;
 	enable_irq(KEYBOARD_IRQ);
+	
+	//initialize the keyboard buffers and flags for each terminal
+	int i;
+	for(i=0; i<NUM_TERMINAL; i++){
+		strcpy((int8_t*)term_save[i].key_buf, "");
+		term_save[i].key_buf_size = 0;
+		term_save[i].terminal_flag = 0;
+	}
 }
 
 /* 
@@ -208,19 +224,19 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes){
 		return -1;
 	}
 	
-	//clear the keyboard buffer
-	key_buf_size = 0;
+	//clear the keyboard buffer					// might need to change this to be active instead of visibile
+	term_save[curr_term].key_buf_size = 0;
 	
 	//wait until the user presses enter to get the buffer
-	terminal_flag = 1;
-	while(terminal_flag != 0);
+	term_save[curr_term].terminal_flag = 1;
+	while(term_save[curr_term].terminal_flag != 0);
 	
 	//get the smaller of the keyboard buffer size and requested bytes
-	if(nbytes < key_buf_size){
+	if(nbytes < term_save[curr_term].key_buf_size){
 		size = nbytes;
 	}
 	else{
-		size = key_buf_size;
+		size = term_save[curr_term].key_buf_size;
 	}
 	
 	//copy the keyboard buffer into the terminal buffer
@@ -230,12 +246,12 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes){
 			read_buf[i] = '\n';
 		}
 		else{
-			read_buf[i] = key_buf[i];
+			read_buf[i] = term_save[curr_term].key_buf[i];
 		}
 	}
 	
 	//clear the keyboard buffer
-	key_buf_size = 0;
+	term_save[curr_term].key_buf_size = 0;
 	return i;
 }
 
@@ -265,6 +281,137 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes){
 	return i;
 }
 
+/*
+ * init_terminals
+ */
+void init_terminals(void){
+	// initialize the terminal tracker to point to the first terminal
+	curr_term = 0;
+
+	// clear the screen and initialize the video memory save for each terminal
+	clear();
+	memcpy((void*)TERM1_VID, (void*)VIDEO_START, VID_SIZE);
+	memcpy((void*)TERM2_VID, (void*)VIDEO_START, VID_SIZE);
+	memcpy((void*)TERM3_VID, (void*)VIDEO_START, VID_SIZE);
+	
+	//initialize the remaining values in the terminal info structures
+	int i;
+	for(i=0; i<NUM_TERMINAL; i++){
+		term_save[i].cursor_x = 0;
+		term_save[i].cursor_y = 0;
+		term_save[i].user_process_num = 0;
+		term_save[i].init = 0;
+	}
+	
+	/* Execute the first program ("shell") for the first terminal */
+	term_save[0].init = 1;
+	__sys_execute((uint8_t*)"shell", 1);			//process 0 -> base of terminal 1
+}
+
+/*
+ * switch_terminals
+ */
+int32_t switch_terminals(uint32_t term_num){
+	//check that the switch actually needs to be performed
+	if(term_num >= NUM_TERMINAL || term_num == curr_term){
+		return -1;
+	}
+	//save the current video screen to the save spot
+	switch(curr_term){
+		case 0 : 
+			memcpy((void*)TERM1_VID, (void*)VIDEO_START, VID_SIZE);
+			break;
+		case 1 : 
+			memcpy((void*)TERM2_VID, (void*)VIDEO_START, VID_SIZE);
+			break;
+		case 2 : 
+			memcpy((void*)TERM3_VID, (void*)VIDEO_START, VID_SIZE);
+			break;
+		default :
+			break;
+	}
+	
+	//save the curr terminal cursor position
+	term_save[curr_term].cursor_x = get_x();
+	term_save[curr_term].cursor_y = get_y();
+	
+	//load the new terminal's saved video memory
+	switch(term_num){
+		case 0:
+			memcpy((void*)VIDEO_START, (void*)TERM1_VID, VID_SIZE);
+			break;
+		case 1:
+			memcpy((void*)VIDEO_START, (void*)TERM2_VID, VID_SIZE);
+			break;
+		case 2:
+			memcpy((void*)VIDEO_START, (void*)TERM3_VID, VID_SIZE);
+			break;
+		default :
+			break;
+	}
+	
+	//update the cursor position on the screen
+	update_cursor(term_save[term_num].cursor_x, term_save[term_num].cursor_y);
+	
+	// switch the currently executing or active process to the one specified by the terminal
+	if(term_save[term_num].init == 0){
+		//save the esp value
+		term_save[curr_term].esp_save = get_esp();
+		term_save[curr_term].ebp_save = get_ebp();
+		// if the terminal hasn't been initialized yet then execute the base shell
+		term_save[term_num].init = 1;
+		curr_term = term_num;
+		__sys_execute((uint8_t*)"shell", 1);
+	}
+	else{
+		switch_active(term_num);
+	}
+	
+	return 0;
+}
+
+/*
+ * switch_active
+ */
+int32_t switch_active(uint32_t term_num){
+	//check valid terminal number
+	if(term_num >= NUM_TERMINAL){
+		return -1;
+	}
+	
+	//find the process number we want to switch to
+	int process_num = term_save[term_num].user_process_num;
+	
+	//check for valid process_num
+	if(process_num >= MAX_PROCESS){
+		return -1;
+	}
+	if(process_present[process_num] != 1){
+		return -1;
+	}
+	
+	// set up the user process page to map to the correct physical user process image
+	page_dir[USER_PAGE_IDX].table_addr = ((USER_START + (process_num * PAGE_SIZE)) >> FOUR_KB_SHIFT);
+	// clear the TLB
+	tlb_flush();
+	
+	//get a pointer to the pcb for the process we are switching into
+	new_pcb = (pcb_t*)(KERNEL_BASE-((process_num+1)*KERNEL_STACK));
+	
+	//save the curent esp pointer before moving to the new stack
+	term_save[curr_term].esp_save = get_esp();
+	term_save[curr_term].ebp_save = get_ebp();
+	
+	//update the terminal number
+	curr_term = term_num;
+	
+	//update the tss to match the new process
+	tss.esp0 = KERNEL_BASE-((process_num)*KERNEL_STACK)-4;
+	tss.ss0 = KERNEL_DS;
+	
+	//assembly linkage function to switch stacks
+}
+	
 /* 
  * buf_fill
  *   DESCRIPTION: Helper function used to add a character to the keyboard buffer and keep track
@@ -276,8 +423,8 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes){
  */
 void buf_fill(unsigned char add){
 	// need to save space for a newline at the end of the buffer
-	if(key_buf_size < BUF_SIZE_MAX){
-		key_buf[key_buf_size] = add;
-		key_buf_size++;
+	if(term_save[curr_term].key_buf_size < BUF_SIZE_MAX){
+		term_save[curr_term].key_buf[term_save[curr_term].key_buf_size] = add;
+		term_save[curr_term].key_buf_size++;
 	}
 }
