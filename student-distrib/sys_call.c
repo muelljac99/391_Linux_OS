@@ -44,7 +44,7 @@ int32_t __sys_halt(uint32_t status){
 	if (curr_pcb->parent_process_num == ORPHAN) {
 		// if attempting to close the base shell, start a new one at the same process number
 		process_present[term_save[curr_term].user_process_num] = 0;
-		sys_execute((uint8_t*)SHELL_NAME);
+		__sys_execute((uint8_t*)SHELL_NAME, 1);
 	}
 	
 	//if this user process used a vidmap then destroy it

@@ -8,7 +8,7 @@
 .text
 
 # globals for the function names to be used elsewhere
-.global tlb_flush, get_esp, get_ebp, push_context, halt_jump
+.global tlb_flush, get_esp, get_ebp, push_context, halt_jump, switch_stack
 
 /* 
  * tlb_flush
@@ -90,7 +90,8 @@ push_context:
 	movl $USER_STACK, %eax
 	subl $4, %eax
 	pushl %eax
-	#push EFLAG
+	#push EFLAG with interrupts enabled
+	sti
 	pushfl
 	#push user cs
 	pushl $USER_CS
@@ -126,3 +127,18 @@ halt_jump:
 	
 	# jump to the execute return
 	jmp execute_return
+
+/*
+ * switch_stack
+ */
+switch_stack:
+	#update the ebp and esp
+	movl 8(%esp), %ebp
+	movl 4(%esp), %esp
+	#return now that we are in the new stack
+	leave
+	ret
+	
+	
+	
+

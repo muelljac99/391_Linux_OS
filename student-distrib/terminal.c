@@ -5,6 +5,7 @@
 #include "irq_asm.h"
 #include "service_irq.h"
 #include "sys_call.h"
+#include "sys_call_asm.h"
 #include "terminal.h"
 #include "paging.h"
 
@@ -350,8 +351,13 @@ int32_t switch_terminals(uint32_t term_num){
 			break;
 	}
 	
-	//update the cursor position on the screen
+	//update the cursor position and character position
 	update_cursor(term_save[term_num].cursor_x, term_save[term_num].cursor_y);
+	set_x(term_save[term_num].cursor_x);
+	set_y(term_save[term_num].cursor_y);
+	
+	//enable interrupts in PIC for the keyboard for the new terminal
+	enable_irq(KEYBOARD_IRQ);
 	
 	// switch the currently executing or active process to the one specified by the terminal
 	if(term_save[term_num].init == 0){
@@ -395,9 +401,6 @@ int32_t switch_active(uint32_t term_num){
 	// clear the TLB
 	tlb_flush();
 	
-	//get a pointer to the pcb for the process we are switching into
-	new_pcb = (pcb_t*)(KERNEL_BASE-((process_num+1)*KERNEL_STACK));
-	
 	//save the curent esp pointer before moving to the new stack
 	term_save[curr_term].esp_save = get_esp();
 	term_save[curr_term].ebp_save = get_ebp();
@@ -410,6 +413,9 @@ int32_t switch_active(uint32_t term_num){
 	tss.ss0 = KERNEL_DS;
 	
 	//assembly linkage function to switch stacks
+	switch_stack(term_save[curr_term].esp_save, term_save[curr_term].ebp_save);
+	
+	return 0;
 }
 	
 /* 
