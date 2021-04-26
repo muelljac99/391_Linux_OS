@@ -81,4 +81,7 @@ Solved: Since the fish program opens 2 files, our implementation of the file sys
 Executing grep or cat with no arguments works when it should not. It attempts to run without arguments which causes some problems.
 Solved: In the getargs system call we added a check to see if the argument buffer is empty, and return -1 if so.
 
+	Creating a new terminal freezes the screen Bug #19; Found - 4/25/2021;
+When pressing Alt-F2(F3) from the first terminal, the screen "freezes" and doesn't even enter the keyboard handler when pressing keys.
+Solved: 
 ------------------------------------------- END OF CHECKPOINT 5 --------------------------------------------------------
