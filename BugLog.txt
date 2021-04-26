@@ -83,5 +83,5 @@ Solved: In the getargs system call we added a check to see if the argument buffe
 
 	Creating a new terminal freezes the screen Bug #19; Found - 4/25/2021;
 When pressing Alt-F2(F3) from the first terminal, the screen "freezes" and doesn't even enter the keyboard handler when pressing keys.
-Solved: 
+Solved: Since we were switching terminals inside of the keyboard interrupt, we needed to restore the IF flag in the context switch and restore the IRQ line on the PIC before keyboard interrupts would work again.
 ------------------------------------------- END OF CHECKPOINT 5 --------------------------------------------------------
