@@ -65,6 +65,7 @@ typedef struct pcb {
 	uint32_t parent_esp0;
 	uint16_t parent_ss0;
 	uint32_t vidmap_flag;
+	uint32_t rtc_freq;
 } pcb_t;
 
 /* array of flags indicating if a process number is available */

@@ -6,10 +6,14 @@
 #include "irq_asm.h"
 #include "service_irq.h"
 #include "sys_call.h"
+#include "sys_call_asm.h"
 #include "rtc.h"
 
 /* flag telling when the rtc interrupt has occurred */
 volatile int rtc_flag = 0;
+
+/* current count value for the rtc */
+int rtc_count = 0;
 
 /* 
  * init_rtc
@@ -56,10 +60,16 @@ void init_rtc(void){
  *   SIDE EFFECTS: clears the C register on the rtc
  */
 void handle_rtc(void){
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	//test_interrupts();
 	
-	// set the interrupt flag to 0
-	rtc_flag = 0;
+	if(curr_pcb->rtc_freq != 0){
+		if(rtc_count++ >= (RTC_RATE/(curr_pcb->rtc_freq))){
+			//only set the interrupt flag once the counter has reached the target
+			rtc_count = 0;
+			rtc_flag = 0;
+		}
+	}
 	
 	outb(RTC_REGC, RTC_PORT);			//select the register C
 	inb(RTC_PORT+1); 				//read it so the next interrupts will come
@@ -72,17 +82,17 @@ void handle_rtc(void){
  *   INPUTS: filename -- unused
  *   OUTPUTS: none
  *   RETURN VALUE: 0 on success, -1 on failure
- *   SIDE EFFECTS: writes to the rtc registers
+ *   SIDE EFFECTS: none
  */
 int32_t rtc_open(const uint8_t* filename){
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	unsigned int flags;
 	
 	//start of critical section
 	cli_and_save(flags);
 	
-	// set the frequency to 2Hz
-	outb(RTC_NMI_REGA, RTC_PORT);
-	outb(0x2F, RTC_PORT+1); 			// the lower 4 bits is the divider value and F corresponds to 2 Hz
+	//set the virtual rate for the process to 2
+	curr_pcb->rtc_freq = 2;
 	
 	restore_flags(flags);
 	return 0;
@@ -90,14 +100,23 @@ int32_t rtc_open(const uint8_t* filename){
 
 /* 
  * rtc_close
- *   DESCRIPTION: The rtc close driver function. This function only signifies that the rtc device has been closed
+ *   DESCRIPTION: The rtc close driver function. This function sets the virtual rtc rate back to 0
  *   INPUTS: fd -- unused
  *   OUTPUTS: none
  *   RETURN VALUE: 0 on success, -1 on failure
  *   SIDE EFFECTS: none
  */
 int32_t rtc_close(int32_t fd){
-	//does nothing
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
+	unsigned int flags;
+	
+	//start of critical section
+	cli_and_save(flags);
+	
+	//set the virtual rate for the process to 2
+	curr_pcb->rtc_freq = 0;
+	
+	restore_flags(flags);
 	return 0;
 }
 
@@ -132,11 +151,10 @@ int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
  *   SIDE EFFECTS: writes to the rtc registers
  */
 int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
+	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	int32_t* freq_ptr = (int32_t*)buf;
 	int32_t freq;
 	unsigned int flags;
-	int match = 2;				//the frequency corresponding to the specified rate value
-	char rate = 0x0F;			//rate of 0x0F corresponds to 2Hz
 	
 	//check that its not a NULL ptr
 	if(freq_ptr == NULL){
@@ -150,23 +168,11 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
 		//frequency is out of bounds (max is 1024 Hz)
 		return -1;
 	}
-	else if((freq&(freq-1)) == 0){
-		// find the rate corresponding to this power of 2 frequency
-		while(freq != match){
-			match = match << 1;
-			rate--;
-		}
-		// this is a power of 2
-		cli_and_save(flags);
+	// this is a power of 2
+	cli_and_save(flags);
+
+	curr_pcb->rtc_freq = freq;
 	
-		// set the frequency to 2Hz
-		outb(RTC_NMI_REGA, RTC_PORT);
-		outb((0x20|rate), RTC_PORT+1); 			// the lower 4 bits is the divider value and F corresponds to 2 Hz
-		
-		restore_flags(flags);
-		return 0;
-	}
-	else{
-		return -1;
-	}
+	restore_flags(flags);
+	return 0;
 }

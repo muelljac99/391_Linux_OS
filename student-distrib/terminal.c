@@ -69,11 +69,13 @@ void handle_keyboard(void){
 		caps = ~caps;
 	}
 	else if(scan == TAB){
-		puts("    ");
-		buf_fill(' ');
-		buf_fill(' ');
-		buf_fill(' ');
-		buf_fill(' ');
+		if(term_save[curr_term].key_buf_size < BUF_SIZE_MAX - 4){		// puts four characters into buffer
+			puts("    ");
+			buf_fill(' ');
+			buf_fill(' ');
+			buf_fill(' ');
+			buf_fill(' ');
+		}
 	}
 	else if(scan == ENTER){
 		// enter will set the terminal flag indicating a read is done
@@ -134,6 +136,9 @@ void handle_keyboard(void){
 			clear();
 		}
 		// different character depending on caps lock and shift combo
+		else if(term_save[curr_term].key_buf_size >= BUF_SIZE_MAX - 1){
+			return;
+		}
 		else if(caps==-1){
 			if((rshift==1)||(lshift==1)){
 				putc(both_code[scan]);
@@ -316,7 +321,7 @@ int32_t switch_terminals(uint32_t term_num){
 	//check that the switch actually needs to be performed
 	if(term_num >= NUM_TERMINAL || term_num == curr_term){
 		return -1;
-		printf("INVALID TERMINAL NUMBER");
+		printf("INVALID TERMINAL NUMBER\n");
 	}
 	//save the current video screen to the save spot
 	switch(curr_term){
@@ -386,7 +391,7 @@ int32_t switch_active(uint32_t term_num){
 	//check valid terminal number
 	if(term_num >= NUM_TERMINAL){
 		return -1;
-		printf("INVALID TERMINAL NUMBER");
+		printf("INVALID TERMINAL NUMBER\n");
 	}
 	
 	//find the process number we want to switch to
@@ -395,11 +400,11 @@ int32_t switch_active(uint32_t term_num){
 	//check for valid process_num
 	if(process_num >= MAX_PROCESS){
 		return -1;
-		printf("INVALID PROCESS NUMBER");
+		printf("INVALID PROCESS NUMBER\n");
 	}
 	if(process_present[process_num] != 1){
 		return -1;
-		printf("INVALID PROCESS");
+		printf("INVALID PROCESS\n");
 	}
 	
 	// set up the user process page to map to the correct physical user process image

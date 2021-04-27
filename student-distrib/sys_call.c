@@ -9,8 +9,7 @@
 #include "file_dir.h"
 #include "paging.h"
 
-/* current process number */
-uint32_t process_num = 0;
+uint32_t num_vidmaps = 0;
 
 /* 
  * sys_halt
@@ -36,6 +35,7 @@ int32_t sys_halt(uint8_t status) {
  *   SIDE EFFECTS: changes current process to the parent
  */
 int32_t __sys_halt(uint32_t status){
+	uint32_t process_num = 0;
 	int i;
 	
 	//get the current pcb pointer
@@ -49,14 +49,18 @@ int32_t __sys_halt(uint32_t status){
 	
 	//if this user process used a vidmap then destroy it
 	if(curr_pcb->vidmap_flag == 1){
-		if(user_table[USER_VID_PAGE_IDX].present == 1){
-			user_table[USER_VID_PAGE_IDX].present = 0;
-			user_table[USER_VID_PAGE_IDX].page_addr = NULL;
+		if(num_vidmaps == 1){
+			if(user_table[USER_VID_PAGE_IDX].present == 1){
+				user_table[USER_VID_PAGE_IDX].present = 0;
+				user_table[USER_VID_PAGE_IDX].page_addr = NULL;
+			}
+			if(page_dir[USER_VID_DIR_IDX].present == 1){
+				page_dir[USER_VID_DIR_IDX].present = 0;
+				page_dir[USER_VID_DIR_IDX].table_addr = NULL;
+			}
 		}
-		if(page_dir[USER_VID_DIR_IDX].present == 1){
-			page_dir[USER_VID_DIR_IDX].present = 0;
-			page_dir[USER_VID_DIR_IDX].table_addr = NULL;
-		}
+		curr_pcb->vidmap_flag = 0;
+		num_vidmaps--;
 	}
 	
 	//restore the parent tss info
@@ -130,10 +134,15 @@ int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
 	
 	/* process initialization variables */
 	uint32_t parent_num;
+	uint32_t process_num = 0;
 	pcb_t* child_pcb;
 	uint8_t start_inst[4];		//starting address is 4bytes long
 	uint32_t start_addr = 0;
 	uint32_t status;
+	
+	/* available process counters */
+	uint32_t uninit_terms = 0;
+	uint32_t num_processes = 0;
 	
 	//split up by spaces to get executable word and arguments
 	for(i=0; i<command_len; i++){
@@ -155,18 +164,19 @@ int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
 		return -1;
 	}
 	
-	/*
-	//prevent more than 3 shells from running
-	if(strncmp(exe, (uint8_t*)SHELL_NAME, SHELL_NAME_LEN) == 0){
-		if(shell_count >= 3){
-			printf("CANNOT RUN ADDITIONAL SHELL\n");
-			return -1;
-		}
-		else{
-			shell_count++;
+	//leave space for the uninitialized terminals
+	for(i=0; i<NUM_TERMINAL; i++){
+		if(term_save[i].init == 0){
+			uninit_terms++;
 		}
 	}
-	*/
+	for(i=0; i<MAX_PROCESS; i++){
+		num_processes += process_present[i];
+	}
+	if(num_processes >= MAX_PROCESS - uninit_terms){
+		printf("CANNOT EXECUTE ADDITIONAL PROCESS ON THIS TERMINAL\n");
+		return -1;
+	}
 	
 	//get the new process number for the child
 	if (orphan == 1) {
@@ -223,8 +233,9 @@ int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
 	child_pcb->parent_esp0 = get_esp();
 	child_pcb->parent_ss0 = tss.ss0;
 	
-	//set the vidmap flag
+	//set the vidmap flag and rtc frequency
 	child_pcb->vidmap_flag = 0;
+	child_pcb->rtc_freq = 0;
 	
 	//set up the file array
 	for(i=0; i<MAX_FILE; i++){
@@ -491,37 +502,41 @@ int32_t sys_vidmap(uint8_t** screen_start){
 	if(screen_start < (uint8_t**)USER_VIRT_START || screen_start >= (uint8_t**)USER_VIRT_END){
 		return -1;
 	}
-	//set up the page table for the user space video memory
-	page_dir[USER_VID_DIR_IDX].table_addr = (((unsigned int)user_table) >> FOUR_KB_SHIFT);
-	page_dir[USER_VID_DIR_IDX].available = 0;			// we are not using these bits
-	page_dir[USER_VID_DIR_IDX].ignored = 0;
-	page_dir[USER_VID_DIR_IDX].page_size = 0;			// 0 because this corresponds to a page table
-	page_dir[USER_VID_DIR_IDX].zero_pad = 0;
-	page_dir[USER_VID_DIR_IDX].accessed = DISABLE;
-	page_dir[USER_VID_DIR_IDX].cache_dis = DISABLE;
-	page_dir[USER_VID_DIR_IDX].write_thru = DISABLE;
-	page_dir[USER_VID_DIR_IDX].user_super = USER;
-	page_dir[USER_VID_DIR_IDX].read_write = ENABLE;
-	page_dir[USER_VID_DIR_IDX].present = ENABLE;
 	
-	//set up the page for the user space video memory (4kB page)
-	user_table[USER_VID_PAGE_IDX].page_addr = (VIDEO_START >> FOUR_KB_SHIFT);
-	user_table[USER_VID_PAGE_IDX].available = 0;		//we are not using these bits
-	user_table[USER_VID_PAGE_IDX].global = ENABLE;
-	user_table[USER_VID_PAGE_IDX].zero_pad = 0;
-	user_table[USER_VID_PAGE_IDX].dirty = DISABLE;
-	user_table[USER_VID_PAGE_IDX].accessed = DISABLE;
-	user_table[USER_VID_PAGE_IDX].cache_dis = DISABLE;
-	user_table[USER_VID_PAGE_IDX].write_thru = DISABLE;
-	user_table[USER_VID_PAGE_IDX].user_super = USER;
-	user_table[USER_VID_PAGE_IDX].read_write = ENABLE;
-	user_table[USER_VID_PAGE_IDX].present = ENABLE;
+	if(num_vidmaps == 0){
+		//set up the page table for the user space video memory
+		page_dir[USER_VID_DIR_IDX].table_addr = (((unsigned int)user_table) >> FOUR_KB_SHIFT);
+		page_dir[USER_VID_DIR_IDX].available = 0;			// we are not using these bits
+		page_dir[USER_VID_DIR_IDX].ignored = 0;
+		page_dir[USER_VID_DIR_IDX].page_size = 0;			// 0 because this corresponds to a page table
+		page_dir[USER_VID_DIR_IDX].zero_pad = 0;
+		page_dir[USER_VID_DIR_IDX].accessed = DISABLE;
+		page_dir[USER_VID_DIR_IDX].cache_dis = DISABLE;
+		page_dir[USER_VID_DIR_IDX].write_thru = DISABLE;
+		page_dir[USER_VID_DIR_IDX].user_super = USER;
+		page_dir[USER_VID_DIR_IDX].read_write = ENABLE;
+		page_dir[USER_VID_DIR_IDX].present = ENABLE;
+		
+		//set up the page for the user space video memory (4kB page)
+		user_table[USER_VID_PAGE_IDX].page_addr = (VIDEO_START >> FOUR_KB_SHIFT);
+		user_table[USER_VID_PAGE_IDX].available = 0;		//we are not using these bits
+		user_table[USER_VID_PAGE_IDX].global = ENABLE;
+		user_table[USER_VID_PAGE_IDX].zero_pad = 0;
+		user_table[USER_VID_PAGE_IDX].dirty = DISABLE;
+		user_table[USER_VID_PAGE_IDX].accessed = DISABLE;
+		user_table[USER_VID_PAGE_IDX].cache_dis = DISABLE;
+		user_table[USER_VID_PAGE_IDX].write_thru = DISABLE;
+		user_table[USER_VID_PAGE_IDX].user_super = USER;
+		user_table[USER_VID_PAGE_IDX].read_write = ENABLE;
+		user_table[USER_VID_PAGE_IDX].present = ENABLE;
+	}
 	
 	//adjust argument to point to user space video memory
 	(*screen_start) = (uint8_t*)USER_VID_START;
 	
 	//set the vidmap flag
 	curr_pcb->vidmap_flag = 1;
+	num_vidmaps++;
 	return 0;
 }
 

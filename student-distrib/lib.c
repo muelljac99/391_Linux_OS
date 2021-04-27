@@ -2,11 +2,14 @@
  * vim:ts=4 noexpandtab */
 
 #include "lib.h"
+#include "terminal.h"
 
 #define VIDEO       0xB8000
 #define NUM_COLS    80
 #define NUM_ROWS    25
-#define ATTRIB      0x7
+#define ATTRIB_1    0x07
+#define ATTRIB_2	0x02
+#define ATTRIB_3	0x03
 
 static int screen_x;
 static int screen_y;
@@ -58,8 +61,14 @@ void line_shift(void){
 	for(j=0; j<2*NUM_COLS; j++){
 		if(j%2 == 0)
 			video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ' ';
-		else
-			video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB;
+		else{
+			if(curr_term == 0)
+				video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB_1;
+			else if(curr_term == 1)
+				video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB_2;
+			else
+				video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB_3;
+		}
 	}
 	return;
 }
@@ -86,7 +95,12 @@ void clear(void) {
     int32_t i;
     for (i = 0; i < NUM_ROWS * NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+		if(curr_term == 0)
+			*(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB_1;
+		else if(curr_term == 1)
+			*(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB_2;
+		else
+			*(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB_3;
     }
 	screen_x = 0;
 	screen_y = 0;
@@ -252,7 +266,12 @@ void putc(uint8_t c) {
 	}
 	else {
         *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = c;
-        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB;
+		if(curr_term == 0)
+			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_1;
+		else if(curr_term == 1)
+			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_2;
+		else
+			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_3;
         screen_x++;
 		if(screen_x == NUM_COLS){
 			screen_x = 0;

@@ -8,6 +8,9 @@
 #define RTC_IRQ 		0x28
 #define RTC_PORT 		0x70
 
+/* rtc actual interrupt rate */
+#define RTC_RATE 		1024
+
 /* rtc register access */
 #define RTC_NMI_REGA 	0x8A
 #define RTC_NMI_REGB 	0x8B
