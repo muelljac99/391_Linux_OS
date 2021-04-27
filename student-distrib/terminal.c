@@ -316,6 +316,7 @@ int32_t switch_terminals(uint32_t term_num){
 	//check that the switch actually needs to be performed
 	if(term_num >= NUM_TERMINAL || term_num == curr_term){
 		return -1;
+		printf("INVALID TERMINAL NUMBER");
 	}
 	//save the current video screen to the save spot
 	switch(curr_term){
@@ -356,17 +357,19 @@ int32_t switch_terminals(uint32_t term_num){
 	set_x(term_save[term_num].cursor_x);
 	set_y(term_save[term_num].cursor_y);
 	
-	//enable interrupts in PIC for the keyboard for the new terminal
-	enable_irq(KEYBOARD_IRQ);
-	
 	// switch the currently executing or active process to the one specified by the terminal
 	if(term_save[term_num].init == 0){
 		//save the esp value
 		term_save[curr_term].esp_save = get_esp();
 		term_save[curr_term].ebp_save = get_ebp();
+		
 		// if the terminal hasn't been initialized yet then execute the base shell
 		term_save[term_num].init = 1;
 		curr_term = term_num;
+		
+		//enable interrupts in PIC for the keyboard for the new terminal
+		enable_irq(KEYBOARD_IRQ);
+		
 		__sys_execute((uint8_t*)"shell", 1);
 	}
 	else{
@@ -383,6 +386,7 @@ int32_t switch_active(uint32_t term_num){
 	//check valid terminal number
 	if(term_num >= NUM_TERMINAL){
 		return -1;
+		printf("INVALID TERMINAL NUMBER");
 	}
 	
 	//find the process number we want to switch to
@@ -391,9 +395,11 @@ int32_t switch_active(uint32_t term_num){
 	//check for valid process_num
 	if(process_num >= MAX_PROCESS){
 		return -1;
+		printf("INVALID PROCESS NUMBER");
 	}
 	if(process_present[process_num] != 1){
 		return -1;
+		printf("INVALID PROCESS");
 	}
 	
 	// set up the user process page to map to the correct physical user process image

@@ -82,7 +82,7 @@ int32_t __sys_halt(uint32_t status){
 	strncpy((int8_t*)curr_pcb->arg_buf, (int8_t*)"", ARG_BUF_SIZE);
 	
 	//set process to available and change process number
-	process_present[process_num] = 0;
+	process_present[term_save[curr_term].user_process_num] = 0;
 	process_num = curr_pcb->parent_process_num;
 	
 	//set the terminal process number to the parent
@@ -169,14 +169,16 @@ int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
 	*/
 	
 	//get the new process number for the child
-	parent_num = process_num;
+	if (orphan == 1) {
+		parent_num = ORPHAN;
+	}
+	else{
+		parent_num = term_save[curr_term].user_process_num;
+	}
 	for(i=0; i<MAX_PROCESS; i++){
 		if(process_present[i] == 0){
 			// this is an open process location
 			process_num = i;
-			if (orphan == 1) {
-				parent_num = ORPHAN;
-			}
 			break;
 		}
 	}
