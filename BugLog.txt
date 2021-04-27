@@ -89,7 +89,7 @@ Solved: Since we were switching terminals inside of the keyboard interrupt, we n
 We open 3 terminals and run counter or pingpong on them. When counter finishes, our OS page faults and our video memory seems to be corrupted as it does not switch correctly when we attempt to switch to other terminals. 
 Solved: We were using a global process number variable and when we executed new user programs without halting them, the process number did not change to represent the process running on the current terminal, so our halt was returning to the wrong parent proccess.
 
-	Running grep command alters the RTC frequency, causing user programs to slow down #19; Found - 4/27/2021;
+	Running grep command alters the RTC frequency, causing user programs to slow down #21; Found - 4/27/2021;
 Running user programs that rely on the rtc (fish, pingpong) on a terminal, then running grep on a separate terminal caused the RTC frequency to change.
 Solved: Virtualizing the RTC so that programs could use it independently of eachother fixed the problem.
 ------------------------------------------- END OF CHECKPOINT 5 --------------------------------------------------------
