@@ -76,3 +76,20 @@ Executing the fish program works, but it doesn't show up on the screen correctly
 terminal in the right locations.
 Solved: Since the fish program opens 2 files, our implementation of the file system open, close, read, write functions only used 1 dentry. We revised the entire file_dir.c file to match how files are opened through system calls, i.e. using the file array provided through the PCB.
 ------------------------------------------- END OF CHECKPOINT 4 --------------------------------------------------------
+
+	Programs with arguments execute when there are no arguments Bug #18; Found - 4/18/2021;
+Executing grep or cat with no arguments works when it should not. It attempts to run without arguments which causes some problems.
+Solved: In the getargs system call we added a check to see if the argument buffer is empty, and return -1 if so.
+
+	Creating a new terminal freezes the screen Bug #19; Found - 4/25/2021;
+When pressing Alt-F2(F3) from the first terminal, the screen "freezes" and doesn't even enter the keyboard handler when pressing keys.
+Solved: Since we were switching terminals inside of the keyboard interrupt, we needed to restore the IF flag in the context switch and restore the IRQ line on the PIC before keyboard interrupts would work again.
+
+	Halting a user program while executing other causes a page fault Bug #20; Found - 4/27/2021;
+We open 3 terminals and run counter or pingpong on them. When counter finishes, our OS page faults and our video memory seems to be corrupted as it does not switch correctly when we attempt to switch to other terminals. 
+Solved: We were using a global process number variable and when we executed new user programs without halting them, the process number did not change to represent the process running on the current terminal, so our halt was returning to the wrong parent proccess.
+
+	Running grep command alters the RTC frequency, causing user programs to slow down #21; Found - 4/27/2021;
+Running user programs that rely on the rtc (fish, pingpong) on a terminal, then running grep on a separate terminal caused the RTC frequency to change.
+Solved: Virtualizing the RTC so that programs could use it independently of eachother fixed the problem.
+------------------------------------------- END OF CHECKPOINT 5 --------------------------------------------------------
