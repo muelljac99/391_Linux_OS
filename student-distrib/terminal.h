@@ -49,7 +49,8 @@ typedef struct term_info {
 term_info_t term_save[NUM_TERMINAL];
 
 /* current visible terminal number */
-uint32_t curr_term;
+uint32_t active_term;
+uint32_t visible_term;
 
 /* handler for the keyboard */
 void handle_keyboard(void);

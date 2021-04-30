@@ -38,12 +38,15 @@ int32_t __sys_halt(uint32_t status){
 	uint32_t process_num = 0;
 	int i;
 	
+	//start critical section to avoid switching active terminal while halting
+	cli();
+	
 	//get the current pcb pointer
 	pcb_t* curr_pcb = (pcb_t*)(get_esp()&PCB_MASK);
 	
 	if (curr_pcb->parent_process_num == ORPHAN) {
 		// if attempting to close the base shell, start a new one at the same process number
-		process_present[term_save[curr_term].user_process_num] = 0;
+		process_present[term_save[active_term].user_process_num] = 0;
 		__sys_execute((uint8_t*)SHELL_NAME, 1);
 	}
 	
@@ -86,11 +89,11 @@ int32_t __sys_halt(uint32_t status){
 	strncpy((int8_t*)curr_pcb->arg_buf, (int8_t*)"", ARG_BUF_SIZE);
 	
 	//set process to available and change process number
-	process_present[term_save[curr_term].user_process_num] = 0;
+	process_present[term_save[active_term].user_process_num] = 0;
 	process_num = curr_pcb->parent_process_num;
 	
 	//set the terminal process number to the parent
-	term_save[curr_term].user_process_num = process_num;
+	term_save[active_term].user_process_num = process_num;
 	
 	//jump to the execute return
 	halt_jump((uint32_t)status, (uint32_t)curr_pcb->parent_esp0);
@@ -144,6 +147,9 @@ int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
 	uint32_t uninit_terms = 0;
 	uint32_t num_processes = 0;
 	
+	//start critical section here to avoid switching active terminals during execute
+	cli();
+	
 	//split up by spaces to get executable word and arguments
 	for(i=0; i<command_len; i++){
 		if((command[i] == ' ')&&(word_flag == 0)){
@@ -183,7 +189,7 @@ int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
 		parent_num = ORPHAN;
 	}
 	else{
-		parent_num = term_save[curr_term].user_process_num;
+		parent_num = term_save[active_term].user_process_num;
 	}
 	for(i=0; i<MAX_PROCESS; i++){
 		if(process_present[i] == 0){
@@ -200,7 +206,7 @@ int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
 	process_present[i] = 1;
 	
 	//set the terminal process number to the child
-	term_save[curr_term].user_process_num = process_num;
+	term_save[active_term].user_process_num = process_num;
 	
 	//set up the paging for the new process
 	page_dir[USER_PAGE_IDX].table_addr = ((USER_START + (process_num * PAGE_SIZE)) >> FOUR_KB_SHIFT);

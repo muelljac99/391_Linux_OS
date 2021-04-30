@@ -3,6 +3,7 @@
 
 #include "lib.h"
 #include "terminal.h"
+#include "paging.h"
 
 #define VIDEO       0xB8000
 #define NUM_COLS    80
@@ -53,21 +54,21 @@ void set_y(int y){
  * Inputs: void
  * Return Value: none
  * Function: A function that moves all the data in the video memory up a line */
-void line_shift(void){
+void line_shift(char* video_loc){
 	int j;
 	//move bottom 24 lines up one line
-	memmove(video_mem, video_mem + (2*NUM_COLS), (NUM_ROWS-1)*(2*NUM_COLS));
+	memmove(video_loc, video_loc + (2*NUM_COLS), (NUM_ROWS-1)*(2*NUM_COLS));
 	//make remaining line all blank
 	for(j=0; j<2*NUM_COLS; j++){
 		if(j%2 == 0)
-			video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ' ';
+			video_loc[((NUM_ROWS-1)*2*NUM_COLS)+j] = ' ';
 		else{
-			if(curr_term == 0)
-				video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB_1;
-			else if(curr_term == 1)
-				video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB_2;
+			if(active_term == 0)
+				video_loc[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB_1;
+			else if(active_term == 1)
+				video_loc[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB_2;
 			else
-				video_mem[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB_3;
+				video_loc[((NUM_ROWS-1)*2*NUM_COLS)+j] = ATTRIB_3;
 		}
 	}
 	return;
@@ -95,9 +96,9 @@ void clear(void) {
     int32_t i;
     for (i = 0; i < NUM_ROWS * NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
-		if(curr_term == 0)
+		if(visible_term == 0)
 			*(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB_1;
-		else if(curr_term == 1)
+		else if(visible_term == 1)
 			*(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB_2;
 		else
 			*(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB_3;
@@ -252,42 +253,98 @@ int32_t puts(int8_t* s) {
  * Return Value: void
  *  Function: Output a character to the console */
 void putc(uint8_t c) {
-    if(c == '\n' || c == '\r') {
-        screen_y++;
-        screen_x = 0;
-		if(screen_y >= NUM_ROWS){
-			line_shift();
-			if(screen_y != 0){
-				screen_y--;
-			}
-		}
-    }
-	//don't print null characters
-	else if(c == '\0'){
-		return;
-	}
-	else {
-        *(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = c;
-		if(curr_term == 0)
-			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_1;
-		else if(curr_term == 1)
-			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_2;
-		else
-			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_3;
-        screen_x++;
-		if(screen_x == NUM_COLS){
-			screen_x = 0;
+	// if the active terminal is the visible one then print to the screen normally
+	if(active_term == visible_term){
+		if(c == '\n' || c == '\r') {
 			screen_y++;
+			screen_x = 0;
 			if(screen_y >= NUM_ROWS){
-				line_shift();
-				screen_y--;
+				line_shift(video_mem);
+				if(screen_y != 0){
+					screen_y--;
+				}
 			}
 		}
-        //screen_x %= NUM_COLS;
-        //screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
-    }
-	//move the cursor to the next space on the screen
-	update_cursor(screen_x, screen_y);
+		//don't print null characters
+		else if(c == '\0'){
+			return;
+		}
+		else {
+			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = c;
+			if(visible_term == 0)
+				*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_1;
+			else if(visible_term == 1)
+				*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_2;
+			else
+				*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_3;
+			screen_x++;
+			if(screen_x == NUM_COLS){
+				screen_x = 0;
+				screen_y++;
+				if(screen_y >= NUM_ROWS){
+					line_shift(video_mem);
+					screen_y--;
+				}
+			}
+			//screen_x %= NUM_COLS;
+			//screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
+		}
+		//move the cursor to the next space on the screen
+		update_cursor(screen_x, screen_y);
+	}
+	//otherwise we want to edit the saved video memory
+	else{
+		if(c == '\n' || c == '\r') {
+			term_save[active_term].cursor_y++;
+			term_save[active_term].cursor_x = 0;
+			if(term_save[active_term].cursor_y >= NUM_ROWS){
+				if(active_term == 0)
+					line_shift((char*)TERM1_VID);
+				else if(active_term == 1)
+					line_shift((char*)TERM2_VID);
+				else
+					line_shift((char*)TERM3_VID);
+				if(term_save[active_term].cursor_y != 0){
+					term_save[active_term].cursor_y--;
+				}
+			}
+		}
+		//don't print null characters
+		else if(c == '\0'){
+			return;
+		}
+		else {
+			if(active_term == 0){
+				*(uint8_t *)((char*)TERM1_VID + ((NUM_COLS * term_save[active_term].cursor_y + term_save[active_term].cursor_x) << 1)) = c;
+				*(uint8_t *)((char*)TERM1_VID + ((NUM_COLS * term_save[active_term].cursor_y + term_save[active_term].cursor_x) << 1) + 1) = ATTRIB_1;
+			}
+			else if(active_term == 1){
+				*(uint8_t *)((char*)TERM2_VID + ((NUM_COLS * term_save[active_term].cursor_y + term_save[active_term].cursor_x) << 1)) = c;
+				*(uint8_t *)((char*)TERM2_VID + ((NUM_COLS * term_save[active_term].cursor_y + term_save[active_term].cursor_x) << 1) + 1) = ATTRIB_2;
+			}
+			else{
+				*(uint8_t *)((char*)TERM3_VID + ((NUM_COLS * term_save[active_term].cursor_y + term_save[active_term].cursor_x) << 1)) = c;
+				*(uint8_t *)((char*)TERM3_VID + ((NUM_COLS * term_save[active_term].cursor_y + term_save[active_term].cursor_x) << 1) + 1) = ATTRIB_3;
+			}
+			term_save[active_term].cursor_x++;
+			if(term_save[active_term].cursor_x == NUM_COLS){
+				term_save[active_term].cursor_x = 0;
+				term_save[active_term].cursor_y++;
+				if(term_save[active_term].cursor_y >= NUM_ROWS){
+					if(active_term == 0)
+						line_shift((char*)TERM1_VID);
+					else if(active_term == 1)
+						line_shift((char*)TERM2_VID);
+					else
+						line_shift((char*)TERM3_VID);
+					term_save[active_term].cursor_y--;
+				}
+			}
+			//screen_x %= NUM_COLS;
+			//screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
+		}
+		//dont update the cursor for non-visible terminals
+	}
 }
 
 /* int8_t* itoa(uint32_t value, int8_t* buf, int32_t radix);

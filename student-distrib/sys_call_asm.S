@@ -106,6 +106,9 @@ execute_return:
 	# restore the ebp to the execute base pointer
 	popl %ebp
 	
+	# end of critical section for halt
+	sti
+	
 	ret
 
 /* 

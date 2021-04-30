@@ -8,6 +8,7 @@
 #include "sys_call_asm.h"
 #include "terminal.h"
 #include "paging.h"
+#include "pit.h"
 
 /* keyboard global flags */
 int rshift = 0;
@@ -69,7 +70,7 @@ void handle_keyboard(void){
 		caps = ~caps;
 	}
 	else if(scan == TAB){
-		if(term_save[curr_term].key_buf_size < BUF_SIZE_MAX - 4){		// puts four characters into buffer
+		if(term_save[visible_term].key_buf_size < BUF_SIZE_MAX - 4){		// puts four characters into buffer
 			puts("    ");
 			buf_fill(' ');
 			buf_fill(' ');
@@ -81,11 +82,11 @@ void handle_keyboard(void){
 		// enter will set the terminal flag indicating a read is done
 		putc('\n');
 		buf_fill('\n');
-		term_save[curr_term].terminal_flag = 0;
+		term_save[visible_term].terminal_flag = 0;
 	}
 	else if(scan == BACKSPACE){
 		//don't backspace if keyboard buffer is empty
-		if(term_save[curr_term].key_buf_size == 0){
+		if(term_save[visible_term].key_buf_size == 0){
 			return;
 		}
 		// move the screen location back one
@@ -110,24 +111,24 @@ void handle_keyboard(void){
 		// move cursor back one
 		update_cursor(get_x(), get_y());
 		// remove element from the terminal buffer
-		if(term_save[curr_term].key_buf_size != 0){
-			term_save[curr_term].key_buf_size--;
+		if(term_save[visible_term].key_buf_size != 0){
+			term_save[visible_term].key_buf_size--;
 		}
 		//get and set functions for the video memory locations (screen_x and screen_y)
 		//move back a space and putc a ' '
 	}
 	else if(scan == F1 && alt == 1){
-		if(curr_term != 0){
+		if(visible_term != 0){
 			switch_terminals(0);
 		}
 	}
 	else if(scan == F2 && alt == 1){
-		if(curr_term != 1){
+		if(visible_term != 1){
 			switch_terminals(1);
 		}
 	}
 	else if(scan == F3 && alt == 1){
-		if(curr_term != 2){
+		if(visible_term != 2){
 			switch_terminals(2);
 		}
 	}
@@ -136,7 +137,7 @@ void handle_keyboard(void){
 			clear();
 		}
 		// different character depending on caps lock and shift combo
-		else if(term_save[curr_term].key_buf_size >= BUF_SIZE_MAX - 1){
+		else if(term_save[visible_term].key_buf_size >= BUF_SIZE_MAX - 1){
 			return;
 		}
 		else if(caps==-1){
@@ -231,18 +232,18 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes){
 	}
 	
 	//clear the keyboard buffer					// might need to change this to be active instead of visibile
-	term_save[curr_term].key_buf_size = 0;
+	term_save[active_term].key_buf_size = 0;
 	
 	//wait until the user presses enter to get the buffer
-	term_save[curr_term].terminal_flag = 1;
-	while(term_save[curr_term].terminal_flag != 0);
+	term_save[active_term].terminal_flag = 1;
+	while(term_save[active_term].terminal_flag != 0);
 	
 	//get the smaller of the keyboard buffer size and requested bytes
-	if(nbytes < term_save[curr_term].key_buf_size){
+	if(nbytes < term_save[active_term].key_buf_size){
 		size = nbytes;
 	}
 	else{
-		size = term_save[curr_term].key_buf_size;
+		size = term_save[active_term].key_buf_size;
 	}
 	
 	//copy the keyboard buffer into the terminal buffer
@@ -252,12 +253,12 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes){
 			read_buf[i] = '\n';
 		}
 		else{
-			read_buf[i] = term_save[curr_term].key_buf[i];
+			read_buf[i] = term_save[active_term].key_buf[i];
 		}
 	}
 	
 	//clear the keyboard buffer
-	term_save[curr_term].key_buf_size = 0;
+	term_save[active_term].key_buf_size = 0;
 	return i;
 }
 
@@ -291,9 +292,6 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes){
  * init_terminals
  */
 void init_terminals(void){
-	// initialize the terminal tracker to point to the first terminal
-	curr_term = 0;
-
 	// clear the screen and initialize the video memory save for each terminal
 	clear();
 	memcpy((void*)TERM1_VID, (void*)VIDEO_START, VID_SIZE);
@@ -309,6 +307,9 @@ void init_terminals(void){
 		term_save[i].init = 0;
 	}
 	
+	//initialize the PIT for scheduling to begin
+	init_pit();
+	
 	/* Execute the first program ("shell") for the first terminal */
 	term_save[0].init = 1;
 	__sys_execute((uint8_t*)"shell", 1);			//process 0 -> base of terminal 1
@@ -319,12 +320,12 @@ void init_terminals(void){
  */
 int32_t switch_terminals(uint32_t term_num){
 	//check that the switch actually needs to be performed
-	if(term_num >= NUM_TERMINAL || term_num == curr_term){
+	if(term_num >= NUM_TERMINAL || term_num == visible_term){
 		return -1;
 		printf("INVALID TERMINAL NUMBER\n");
 	}
 	//save the current video screen to the save spot
-	switch(curr_term){
+	switch(visible_term){
 		case 0 : 
 			memcpy((void*)TERM1_VID, (void*)VIDEO_START, VID_SIZE);
 			break;
@@ -339,8 +340,8 @@ int32_t switch_terminals(uint32_t term_num){
 	}
 	
 	//save the curr terminal cursor position
-	term_save[curr_term].cursor_x = get_x();
-	term_save[curr_term].cursor_y = get_y();
+	term_save[visible_term].cursor_x = get_x();
+	term_save[visible_term].cursor_y = get_y();
 	
 	//load the new terminal's saved video memory
 	switch(term_num){
@@ -362,6 +363,10 @@ int32_t switch_terminals(uint32_t term_num){
 	set_x(term_save[term_num].cursor_x);
 	set_y(term_save[term_num].cursor_y);
 	
+	visible_term = term_num;
+	
+	/* active process switch moved to the scheduler
+	
 	// switch the currently executing or active process to the one specified by the terminal
 	if(term_save[term_num].init == 0){
 		//save the esp value
@@ -380,6 +385,7 @@ int32_t switch_terminals(uint32_t term_num){
 	else{
 		switch_active(term_num);
 	}
+	*/
 	
 	return 0;
 }
@@ -413,18 +419,18 @@ int32_t switch_active(uint32_t term_num){
 	tlb_flush();
 	
 	//save the curent esp pointer before moving to the new stack
-	term_save[curr_term].esp_save = get_esp();
-	term_save[curr_term].ebp_save = get_ebp();
+	term_save[active_term].esp_save = get_esp();
+	term_save[active_term].ebp_save = get_ebp();
 	
 	//update the terminal number
-	curr_term = term_num;
+	active_term = term_num;
 	
 	//update the tss to match the new process
 	tss.esp0 = KERNEL_BASE-((process_num)*KERNEL_STACK)-4;
 	tss.ss0 = KERNEL_DS;
 	
 	//assembly linkage function to switch stacks
-	switch_stack(term_save[curr_term].esp_save, term_save[curr_term].ebp_save);
+	switch_stack(term_save[active_term].esp_save, term_save[active_term].ebp_save);
 	
 	return 0;
 }
@@ -440,8 +446,8 @@ int32_t switch_active(uint32_t term_num){
  */
 void buf_fill(unsigned char add){
 	// need to save space for a newline at the end of the buffer
-	if(term_save[curr_term].key_buf_size < BUF_SIZE_MAX){
-		term_save[curr_term].key_buf[term_save[curr_term].key_buf_size] = add;
-		term_save[curr_term].key_buf_size++;
+	if(term_save[visible_term].key_buf_size < BUF_SIZE_MAX){
+		term_save[visible_term].key_buf[term_save[visible_term].key_buf_size] = add;
+		term_save[visible_term].key_buf_size++;
 	}
 }

@@ -15,7 +15,7 @@ int get_x(void);
 int get_y(void);
 void set_x(int x);
 void set_y(int y);
-void line_shift(void);
+void line_shift(char* video_loc);
 void update_cursor(int x, int y);
 
 int32_t printf(int8_t *format, ...);
