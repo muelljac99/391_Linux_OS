@@ -280,7 +280,7 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes){
 		return -1;
 	}
 	
-	//put specified number of characters onto the screen
+	//put specified number of characters onto the screen (critical section since video memory shared)
 	for(i=0; i<nbytes; i++){
 		putc(write_buf[i]);
 	}

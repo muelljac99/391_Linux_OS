@@ -257,7 +257,9 @@ void putc(uint8_t c) {
         screen_x = 0;
 		if(screen_y >= NUM_ROWS){
 			line_shift();
-			screen_y--;
+			if(screen_y != 0){
+				screen_y--;
+			}
 		}
     }
 	//don't print null characters
