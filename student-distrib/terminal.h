@@ -52,6 +52,10 @@ term_info_t term_save[NUM_TERMINAL];
 uint32_t active_term;
 uint32_t visible_term;
 
+/* printing synchronization flags */
+int switch_terms_flag;
+int putc_flag;
+
 /* handler for the keyboard */
 void handle_keyboard(void);
 

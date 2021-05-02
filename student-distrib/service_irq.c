@@ -11,7 +11,7 @@
 
 #define EXCEPTION_STATUS			256
 
-const char exception_resp[NUM_EXCEPTION][32] = {"Division by Zero", "Single-step Interrupt", "Non-Maskablee Interrupt",
+const char exception_resp[NUM_EXCEPTION][32] = {"Division by Zero", "Single-step Interrupt", "Non-Maskable Interrupt",
 												"Breakpoint", "Overflow", "Bounds", "Invalid Opcode", "Coprocessor N/A",
 												"Double Fault", "Coprocessor Seg Over", "Invalid Task State Seg", "Segment Not Present",
 												"Stack Fault", "General Protection Fault", "Page Fault", "reserved",

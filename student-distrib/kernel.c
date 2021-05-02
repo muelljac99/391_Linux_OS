@@ -34,6 +34,10 @@ void entry(unsigned long magic, unsigned long addr) {
 	active_term = 0;
 	visible_term = 0;
 	
+	//initialize the printing sychronization flags
+	switch_terms_flag = -1;
+	putc_flag = 0;
+	
     /* Clear the screen. */
     clear();
 

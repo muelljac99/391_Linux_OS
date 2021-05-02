@@ -3,6 +3,8 @@
 
 #include "lib.h"
 #include "terminal.h"
+#include "pit.h"
+#include "i8259.h"
 #include "paging.h"
 
 #define VIDEO       0xB8000
@@ -253,6 +255,12 @@ int32_t puts(int8_t* s) {
  * Return Value: void
  *  Function: Output a character to the console */
 void putc(uint8_t c) {
+	//set the printing synch flag
+	putc_flag = 1;
+	
+	//disable pit interrupts
+	disable_irq(PIT_IRQ);
+	
 	// if the active terminal is the visible one then print to the screen normally
 	if(active_term == visible_term){
 		if(c == '\n' || c == '\r') {
@@ -345,6 +353,63 @@ void putc(uint8_t c) {
 		}
 		//dont update the cursor for non-visible terminals
 	}
+	
+	//disable the print synch flag
+	putc_flag = 0;
+	
+	if(switch_terms_flag != -1){
+		uint32_t flags;
+		//run the queued switch terminals
+		cli_and_save(flags);
+		switch_terminals(switch_terms_flag);
+		restore_flags(flags);
+	}
+	
+	//enable pit interrupts
+	enable_irq(PIT_IRQ);
+}
+
+/* void putc_vis(uint8_t c);
+ * Inputs: uint_8* c = character to print
+ * Return Value: void
+ * Function: Output a character to the visible console */
+void putc_vis(uint8_t c) {
+	if(c == '\n' || c == '\r') {
+		screen_y++;
+		screen_x = 0;
+		if(screen_y >= NUM_ROWS){
+			line_shift(video_mem);
+			if(screen_y != 0){
+				screen_y--;
+			}
+		}
+	}
+	//don't print null characters
+	else if(c == '\0'){
+		return;
+	}
+	else {
+		*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1)) = c;
+		if(visible_term == 0)
+			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_1;
+		else if(visible_term == 1)
+			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_2;
+		else
+			*(uint8_t *)(video_mem + ((NUM_COLS * screen_y + screen_x) << 1) + 1) = ATTRIB_3;
+		screen_x++;
+		if(screen_x == NUM_COLS){
+			screen_x = 0;
+			screen_y++;
+			if(screen_y >= NUM_ROWS){
+				line_shift(video_mem);
+				screen_y--;
+			}
+		}
+		//screen_x %= NUM_COLS;
+		//screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
+	}
+	//move the cursor to the next space on the screen
+	update_cursor(screen_x, screen_y);
 }
 
 /* int8_t* itoa(uint32_t value, int8_t* buf, int32_t radix);

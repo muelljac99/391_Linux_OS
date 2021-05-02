@@ -19,11 +19,11 @@ void init_pit(void){
 	cli_and_save(flags);
 	
 	//set the PIT to operate as a rate generator
-	outb(0x30, PIT_CMD);
+	outb(PIT_CTRL_WORD, PIT_CMD);
 	
 	//set the reload rate to about 25ms interrupts
-	outb(0x70, PIT_DATA);
-	outb(0xBA, PIT_DATA);
+	outb(PIT_LOBYTE, PIT_DATA);
+	outb(PIT_HIBYTE, PIT_DATA);
 	
 	//enable PIC interrupts for the PIT
 	enable_irq(PIT_IRQ);
@@ -32,16 +32,7 @@ void init_pit(void){
 }
 
 void handle_pit(void){
-	uint32_t flags;
 	//call the scheduler function
 	scheduler();
-	
-	cli_and_save(flags);
-	
-	//set the reload rate to about 25ms interrupts
-	outb(0x70, PIT_DATA);
-	outb(0xBA, PIT_DATA);
-	
-	restore_flags(flags);
 }
 

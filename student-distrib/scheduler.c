@@ -28,7 +28,7 @@ void scheduler(void){
 		active_term = term_num;
 		
 		//enable interrupts in PIC for the keyboard for the new terminal
-		enable_irq(KEYBOARD_IRQ);
+		enable_irq(PIT_IRQ);
 		
 		__sys_execute((uint8_t*)"shell", 1);
 	}

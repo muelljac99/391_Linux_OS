@@ -71,16 +71,19 @@ void handle_keyboard(void){
 	}
 	else if(scan == TAB){
 		if(term_save[visible_term].key_buf_size < BUF_SIZE_MAX - 4){		// puts four characters into buffer
-			puts("    ");
+			putc_vis(' ');
 			buf_fill(' ');
+			putc_vis(' ');
 			buf_fill(' ');
+			putc_vis(' ');
 			buf_fill(' ');
+			putc_vis(' ');
 			buf_fill(' ');
 		}
 	}
 	else if(scan == ENTER){
 		// enter will set the terminal flag indicating a read is done
-		putc('\n');
+		putc_vis('\n');
 		buf_fill('\n');
 		term_save[visible_term].terminal_flag = 0;
 	}
@@ -100,7 +103,7 @@ void handle_keyboard(void){
 			set_x(get_x() - 1);
 		}
 		// clear the character there
-		putc(' ');
+		putc_vis(' ');
 		if(get_x() == 0){
 			set_x(NUM_COLS-1);
 			set_y(get_y()-1);
@@ -115,7 +118,7 @@ void handle_keyboard(void){
 			term_save[visible_term].key_buf_size--;
 		}
 		//get and set functions for the video memory locations (screen_x and screen_y)
-		//move back a space and putc a ' '
+		//move back a space and putc_vis a ' '
 	}
 	else if(scan == F1 && alt == 1){
 		if(visible_term != 0){
@@ -142,21 +145,21 @@ void handle_keyboard(void){
 		}
 		else if(caps==-1){
 			if((rshift==1)||(lshift==1)){
-				putc(both_code[scan]);
+				putc_vis(both_code[scan]);
 				buf_fill(both_code[scan]);
 			}
 			else{
-				putc(cap_code[scan]);
+				putc_vis(cap_code[scan]);
 				buf_fill(cap_code[scan]);
 			}
 		}
 		else{
 			if((rshift==1)||(lshift==1)){
-				putc(shift_code[scan]);
+				putc_vis(shift_code[scan]);
 				buf_fill(shift_code[scan]);
 			}
 			else{
-				putc(scancode[scan]);
+				putc_vis(scancode[scan]);
 				buf_fill(scancode[scan]);
 			}
 		}
@@ -281,7 +284,7 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes){
 		return -1;
 	}
 	
-	//put specified number of characters onto the screen (critical section since video memory shared)
+	//put specified number of characters onto the screen
 	for(i=0; i<nbytes; i++){
 		putc(write_buf[i]);
 	}
@@ -295,8 +298,14 @@ void init_terminals(void){
 	// clear the screen and initialize the video memory save for each terminal
 	clear();
 	memcpy((void*)TERM1_VID, (void*)VIDEO_START, VID_SIZE);
+	visible_term = 1;
+	clear();
 	memcpy((void*)TERM2_VID, (void*)VIDEO_START, VID_SIZE);
+	visible_term = 2;
+	clear();
 	memcpy((void*)TERM3_VID, (void*)VIDEO_START, VID_SIZE);
+	visible_term = 0;
+	clear();
 	
 	//initialize the remaining values in the terminal info structures
 	int i;
@@ -319,6 +328,14 @@ void init_terminals(void){
  * switch_terminals
  */
 int32_t switch_terminals(uint32_t term_num){
+	//set the printing synch flag
+	switch_terms_flag = term_num;
+	
+	if(putc_flag == 1){
+		//return without disabling the switch_terms_flag
+		return 0;
+	}
+	
 	//check that the switch actually needs to be performed
 	if(term_num >= NUM_TERMINAL || term_num == visible_term){
 		return -1;
@@ -363,6 +380,16 @@ int32_t switch_terminals(uint32_t term_num){
 	set_x(term_save[term_num].cursor_x);
 	set_y(term_save[term_num].cursor_y);
 	
+	//find the process number we want to switch to
+	int process_num = term_save[term_num].user_process_num;
+	pcb_t* curr_pcb = (pcb_t*)(KERNEL_BASE-((process_num+1)*KERNEL_STACK));
+	
+	//change the vidmap page
+	if(curr_pcb->vidmap_flag == 1){
+		//change the vidmap page to map to the true video memory
+		user_table[USER_VID_PAGE_IDX].page_addr = (VIDEO_START >> FOUR_KB_SHIFT);
+	}
+	
 	visible_term = term_num;
 	
 	/* active process switch moved to the scheduler
@@ -387,6 +414,10 @@ int32_t switch_terminals(uint32_t term_num){
 	}
 	*/
 	
+		
+	//disable the print synch flag
+	switch_terms_flag = -1;
+	
 	return 0;
 }
 
@@ -402,6 +433,7 @@ int32_t switch_active(uint32_t term_num){
 	
 	//find the process number we want to switch to
 	int process_num = term_save[term_num].user_process_num;
+	pcb_t* curr_pcb = (pcb_t*)(KERNEL_BASE-((process_num+1)*KERNEL_STACK));
 	
 	//check for valid process_num
 	if(process_num >= MAX_PROCESS){
@@ -417,6 +449,23 @@ int32_t switch_active(uint32_t term_num){
 	page_dir[USER_PAGE_IDX].table_addr = ((USER_START + (process_num * PAGE_SIZE)) >> FOUR_KB_SHIFT);
 	// clear the TLB
 	tlb_flush();
+	
+	//change the vidmap page
+	if(curr_pcb->vidmap_flag == 1){
+		if(term_num == visible_term){
+			//change the vidmap page to map to the true video memory
+			user_table[USER_VID_PAGE_IDX].page_addr = (VIDEO_START >> FOUR_KB_SHIFT);
+		}
+		else{
+			//change the vidmap page to map to the saved video memory of term_num
+			if(term_num == 0)
+				user_table[USER_VID_PAGE_IDX].page_addr = (TERM1_VID >> FOUR_KB_SHIFT);
+			else if(term_num == 1)
+				user_table[USER_VID_PAGE_IDX].page_addr = (TERM2_VID >> FOUR_KB_SHIFT);
+			else
+				user_table[USER_VID_PAGE_IDX].page_addr = (TERM3_VID >> FOUR_KB_SHIFT);
+		}
+	}
 	
 	//save the curent esp pointer before moving to the new stack
 	term_save[active_term].esp_save = get_esp();
