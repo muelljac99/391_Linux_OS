@@ -42,7 +42,7 @@ void init_rtc(void){
 	
 	// set the frequency to the default rate
 	outb(RTC_NMI_REGA, RTC_PORT);
-	outb(0x26, RTC_PORT+1); 			//0x26 is the default rtc frequency and rate setting
+	outb(RTC_INIT_WORD, RTC_PORT+1); 			//0x26 is the default rtc frequency and rate setting
 	
 	enable_irq(RTC_IRQ);
 	

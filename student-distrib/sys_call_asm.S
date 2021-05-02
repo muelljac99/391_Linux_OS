@@ -130,6 +130,12 @@ halt_jump:
 
 /*
  * switch_stack
+ *   DESCRIPTION: Change the esp and ebp to correspond to a process of a different terminal
+ *   INPUTS: esp -- stack location on the new stack to switch to
+ *			 ebp -- stack base pointer on the new stack to switch to
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: switches process using the kernel stack
  */
 switch_stack:
 	#update the ebp and esp

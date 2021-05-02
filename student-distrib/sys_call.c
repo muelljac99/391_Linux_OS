@@ -9,6 +9,7 @@
 #include "file_dir.h"
 #include "paging.h"
 
+/* the number of user processes that use a vidmap to keep track of when to close the page */
 uint32_t num_vidmaps = 0;
 
 /* 
@@ -122,6 +123,7 @@ int32_t sys_execute(const uint8_t* command){
  *   SIDE EFFECTS: changes current process to the child
  */
 int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
+	int i;
 	/* string editing variables */
 	uint32_t command_len = strlen((int8_t*) command);
 	dentry_t exe_dentry;
@@ -130,7 +132,6 @@ int32_t __sys_execute(const uint8_t* command, uint32_t orphan){
 	uint32_t word_break;
 	uint8_t exe[ARG_BUF_SIZE] = "";
 	uint8_t args[ARG_BUF_SIZE] = "";
-	int i;
 	
 	/* process initialization variables */
 	uint32_t parent_num;

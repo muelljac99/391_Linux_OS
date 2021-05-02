@@ -29,6 +29,9 @@ void entry(unsigned long magic, unsigned long addr) {
     multiboot_info_t *mbi;
 	
 	module_t* file_sys;
+	
+	// initialize the terminal tracker to point to the first terminal
+	curr_term = 0;
 
     /* Clear the screen. */
     clear();

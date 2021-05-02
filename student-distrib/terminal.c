@@ -26,6 +26,7 @@ int caps = 0;
  *   SIDE EFFECTS: places a character onto the screen
  */
 void handle_keyboard(void){
+	//different character output depending on shift and caps lock
 	char scancode[] = {0 , 0, '1', '2', '3','4', '5', '6', '7', '8', '9', '0', '-', '=', 0, 0, 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i',
 					   'o', 'p', '[', ']', 0, 0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', 0, '\\', 'z', 'x', 'c', 
 					   'v', 'b', 'n', 'm', ',', '.', '/', 0, 0, 0, ' '};
@@ -38,9 +39,12 @@ void handle_keyboard(void){
 	char shift_code[] = {0 , 0, '!', '@', '#','$', '%', '^', '&', '*', '(', ')', '_', '+', 0, 0, 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I',
 					   'O', 'P', '{', '}', 0, 0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '\"', '~', 0, '|', 'Z', 'X', 'C', 
 					   'V', 'B', 'N', 'M', '<', '>', '?', 0, 0, 0, ' '};
+	
+	//get the scan code from the keyboard
 	uint32_t scan;
 	scan = inb(KEYBOARD_PORT);
-	// 0x40 is the number of elements that we have characters chosen for
+	
+	//check for held keys
 	if(scan == LSHIFT){
 		lshift = 1;
 	}
@@ -68,6 +72,7 @@ void handle_keyboard(void){
 	else if(scan == CAPS_LOCK){
 		caps = ~caps;
 	}
+	//tab prints four spaces
 	else if(scan == TAB){
 		if(term_save[curr_term].key_buf_size < BUF_SIZE_MAX - 4){		// puts four characters into buffer
 			puts("    ");
@@ -77,12 +82,14 @@ void handle_keyboard(void){
 			buf_fill(' ');
 		}
 	}
+	//enter finishes a terminal read
 	else if(scan == ENTER){
 		// enter will set the terminal flag indicating a read is done
 		putc('\n');
 		buf_fill('\n');
 		term_save[curr_term].terminal_flag = 0;
 	}
+	//backspace removes a character
 	else if(scan == BACKSPACE){
 		//don't backspace if keyboard buffer is empty
 		if(term_save[curr_term].key_buf_size == 0){
@@ -116,6 +123,7 @@ void handle_keyboard(void){
 		//get and set functions for the video memory locations (screen_x and screen_y)
 		//move back a space and putc a ' '
 	}
+	//F# and ALT combo switches terminals
 	else if(scan == F1 && alt == 1){
 		if(curr_term != 0){
 			switch_terminals(0);
@@ -131,7 +139,9 @@ void handle_keyboard(void){
 			switch_terminals(2);
 		}
 	}
+	// 0x40 is the number of elements that we have characters chosen for
 	else if(scan < 0x40 && scancode[scan] != 0){
+		//CTRL and L clears the screen
 		if((ctrl == 1)&&(scancode[scan] == 'l')){
 			clear();
 		}
@@ -289,16 +299,24 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes){
 
 /*
  * init_terminals
+ *   DESCRIPTION: Initialize the video saves and terminal info for all 3 terminals
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: clears all the terminal video saves, executes the base shell, and doesn't return
  */
 void init_terminals(void){
-	// initialize the terminal tracker to point to the first terminal
-	curr_term = 0;
-
 	// clear the screen and initialize the video memory save for each terminal
 	clear();
 	memcpy((void*)TERM1_VID, (void*)VIDEO_START, VID_SIZE);
+	curr_term = 1;
+	clear();
 	memcpy((void*)TERM2_VID, (void*)VIDEO_START, VID_SIZE);
+	curr_term = 2;
+	clear();
 	memcpy((void*)TERM3_VID, (void*)VIDEO_START, VID_SIZE);
+	curr_term = 0;
+	clear();
 	
 	//initialize the remaining values in the terminal info structures
 	int i;
@@ -316,6 +334,11 @@ void init_terminals(void){
 
 /*
  * switch_terminals
+ *   DESCRIPTION: Switches the currently active and visible terminal to the specified number
+ *   INPUTS: term_num -- the number of the desired terminal
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on failure
+ *   SIDE EFFECTS: switches the currently executing user process and video memory
  */
 int32_t switch_terminals(uint32_t term_num){
 	//check that the switch actually needs to be performed
@@ -386,6 +409,11 @@ int32_t switch_terminals(uint32_t term_num){
 
 /*
  * switch_active
+ *   DESCRIPTION: Switches between two already initialized terminals and processes
+ *   INPUTS: term_num -- the number of the desired terminal
+ *   OUTPUTS: none
+ *   RETURN VALUE: 0 on success, -1 on failure
+ *   SIDE EFFECTS: switches stacks, switches page info, flushes tlb
  */
 int32_t switch_active(uint32_t term_num){
 	//check valid terminal number

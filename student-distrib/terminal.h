@@ -33,6 +33,7 @@
 #define F2				0x3C
 #define F3				0x3D
 
+// this is the structure unique to each terminal allowing switching between them
 typedef struct term_info {
 	int cursor_x;
 	int cursor_y;

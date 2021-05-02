@@ -32,7 +32,7 @@
 #define SHELL_NAME_LEN		5
 
 /* sys_execute contant for an orphan process */
-#define ORPHAN 				256
+#define ORPHAN 				1234
 
 /* executable starting eip location */
 #define EXE_EIP_OFFSET		24

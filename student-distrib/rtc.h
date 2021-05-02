@@ -15,6 +15,7 @@
 #define RTC_NMI_REGA 	0x8A
 #define RTC_NMI_REGB 	0x8B
 #define RTC_REGC		0x0C
+#define RTC_INIT_WORD	0x26
 
 /* initializing the rtc */
 void init_rtc(void);
