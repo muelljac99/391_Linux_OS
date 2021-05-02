@@ -92,4 +92,8 @@ Solved: We were using a global process number variable and when we executed new 
 	Running grep command alters the RTC frequency, causing user programs to slow down #21; Found - 4/27/2021;
 Running user programs that rely on the rtc (fish, pingpong) on a terminal, then running grep on a separate terminal caused the RTC frequency to change.
 Solved: Virtualizing the RTC so that programs could use it independently of eachother fixed the problem.
+
+	Clearing the screen during counter causes the system to crash #22; Found - 4/27/2021;
+Running the counter on any terminal then pressing CTRL+L on that terminal causes the system to crash then reboot.
+When a interrupt comes during the putc function, the clear function will move the screen pointer to the top of the screen and a the screen_y will then be decremented after the line shift by the putc function which leads to a negative number. The screen_y value should be checked if it is 0 after the line shfit.
 ------------------------------------------- END OF CHECKPOINT 5 --------------------------------------------------------
