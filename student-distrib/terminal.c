@@ -73,7 +73,7 @@ void handle_keyboard(void){
 		caps = ~caps;
 	}
 	//tab prints four spaces
-	else if(scan == TAB){
+	else if(scan == TAB && term_save[curr_term].terminal_flag == 1){
 		if(term_save[curr_term].key_buf_size < BUF_SIZE_MAX - 4){		// puts four characters into buffer
 			puts("    ");
 			buf_fill(' ');
@@ -83,14 +83,14 @@ void handle_keyboard(void){
 		}
 	}
 	//enter finishes a terminal read
-	else if(scan == ENTER){
+	else if(scan == ENTER && term_save[curr_term].terminal_flag == 1){
 		// enter will set the terminal flag indicating a read is done
 		putc('\n');
 		buf_fill('\n');
 		term_save[curr_term].terminal_flag = 0;
 	}
 	//backspace removes a character
-	else if(scan == BACKSPACE){
+	else if(scan == BACKSPACE && term_save[curr_term].terminal_flag == 1){
 		//don't backspace if keyboard buffer is empty
 		if(term_save[curr_term].key_buf_size == 0){
 			return;
@@ -149,7 +149,7 @@ void handle_keyboard(void){
 		else if(term_save[curr_term].key_buf_size >= BUF_SIZE_MAX - 1){
 			return;
 		}
-		else if(caps==-1){
+		else if(caps==-1 && term_save[curr_term].terminal_flag == 1){
 			if((rshift==1)||(lshift==1)){
 				putc(both_code[scan]);
 				buf_fill(both_code[scan]);
@@ -159,7 +159,7 @@ void handle_keyboard(void){
 				buf_fill(cap_code[scan]);
 			}
 		}
-		else{
+		else if(term_save[curr_term].terminal_flag == 1){
 			if((rshift==1)||(lshift==1)){
 				putc(shift_code[scan]);
 				buf_fill(shift_code[scan]);
