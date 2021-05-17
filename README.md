@@ -1,3 +1,7 @@
+WARNING
+-----
+You SHOULD NOT copy these code into your own ECE 391 project without proper citation. Doing this is a violation of academic integrity. You have been warned.
+
 ACADEMIC INTEGRITY
 -----
 Please review the University of Illinois Student Code before starting,
