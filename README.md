@@ -1,3 +1,7 @@
+IMPORANT
+-----
+Currently, the scheduling feature is only availabe on the Scheduling branch.
+
 WARNING
 -----
 You SHOULD NOT copy these code into your own ECE 391 project without proper citation. Doing this is a violation of academic integrity. You have been warned.
